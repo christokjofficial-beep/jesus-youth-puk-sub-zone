@@ -1,0 +1,13 @@
+.appContainer {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.dynamicBg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  transition: none;
+  pointer-events: none;
+}

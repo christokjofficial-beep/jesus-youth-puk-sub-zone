@@ -1,0 +1,156 @@
+@import './variables.css';
+@import './reset.css';
+
+/* Utility classes & shared layouts */
+.wrap {
+  width: 100%;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.scene {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 120px 6vw 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.scene.tall {
+  min-height: 170vh;
+  align-items: flex-start;
+}
+
+.dark-text {
+  color: var(--dark);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 12px var(--gold);
+  flex-shrink: 0;
+}
+
+.bordered {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 5px 16px;
+  display: inline-block;
+}
+
+.headline {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(4.2rem, 13vw, 12rem);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+}
+
+.headline2 {
+  font-weight: 500;
+  font-size: clamp(1.6rem, 3.4vw, 3rem);
+  letter-spacing: -0.01em;
+  margin-top: 10px;
+}
+
+.big {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(2.6rem, 6.5vw, 6rem);
+  line-height: 1;
+  max-width: 1000px;
+  margin: 0 auto 34px;
+}
+
+.center {
+  text-align: center;
+}
+
+.tag {
+  max-width: 360px;
+  font-size: clamp(1rem, 1.6vw, 1.4rem);
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.tag i {
+  font-family: var(--serif);
+  font-size: 1.15em;
+}
+
+.side {
+  max-width: 420px;
+  font-size: clamp(1rem, 1.5vw, 1.35rem);
+  line-height: 1.45;
+}
+
+.side .sub {
+  margin-bottom: 14px;
+}
+
+/* Base reveal transition for non-GSAP fallback / hydration */
+.rv {
+  opacity: 0;
+  transform: translateY(50px);
+  filter: blur(6px);
+  transition: opacity 1.2s cubic-bezier(0.2, 0.7, 0.2, 1),
+              transform 1.2s cubic-bezier(0.2, 0.7, 0.2, 1),
+              filter 1.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.rv.in {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.d1 {
+  transition-delay: 0.15s;
+}
+
+.d2 {
+  transition-delay: 0.3s;
+}
+
+@media (max-width: 860px) {
+  .scene {
+    padding: 110px 22px 60px;
+  }
+  .scene.tall {
+    min-height: auto;
+  }
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

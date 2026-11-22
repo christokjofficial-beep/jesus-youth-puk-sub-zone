@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grace Fellowship — Faith Begins Here</title>
+<meta name="description" content="A journey from heaven to heart. Join Grace Fellowship Church.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;1,300;1,500&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/ScrollTrigger.min.js"></script>
+<style>
+:root{
+  --magnolia:#e7e6f0;
+  --dark:#171820;
+  --gold:#c9ad70;
+  --serif:'Cormorant Garamond',serif;
+  --sans:'Manrope',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:#090b18;color:#fff;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body.locked{overflow:hidden}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+em{font-style:italic;color:var(--gold)}
+
+/* ---------- BACKGROUND + CANVAS ---------- */
+#bg{position:fixed;inset:0;z-index:-2;transition:none}
+#fx{position:fixed;inset:0;z-index:-1;pointer-events:none}
+
+/* ---------- LOADER ---------- */
+.loader{position:fixed;inset:0;background:#171717;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:30px 20px;transition:opacity .9s ease,visibility .9s}
+.loader.done{opacity:0;visibility:hidden}
+.loader .brand{font-family:var(--serif);letter-spacing:.35em;font-size:1.1rem;text-transform:uppercase;color:#ccc}
+.loader .mid{display:flex;flex-direction:column;align-items:center;gap:40px}
+.l-cross{width:70px;height:96px;position:relative;animation:float 3s ease-in-out infinite}
+.l-cross::before,.l-cross::after{content:"";position:absolute;background:linear-gradient(#f6e2a8,var(--gold));border-radius:3px;box-shadow:0 0 30px rgba(217,168,78,.6)}
+.l-cross::before{left:31px;top:0;width:8px;height:96px}
+.l-cross::after{left:0;top:26px;width:70px;height:8px}
+@keyframes float{50%{transform:translateY(-10px)}}
+.bar{display:flex;align-items:center;gap:0;width:260px;position:relative;justify-content:center;font-size:.8rem;letter-spacing:.2em}
+.bar .line{position:absolute;left:0;top:50%;height:1px;background:#555;width:100%}
+.bar .fill{position:absolute;left:0;top:50%;height:1px;background:var(--gold);width:0}
+.bar .pct{position:relative;background:#171717;padding:0 14px;color:#ccc}
+.loader .hint{color:#777;font-size:.8rem}
+
+/* ---------- HEADER ---------- */
+header{position:fixed;top:0;left:0;right:0;z-index:100;padding:22px 30px;display:flex;align-items:center;justify-content:space-between;pointer-events:none;color:#fff;transition:color .4s}
+header.light{color:var(--dark)}
+header>*{pointer-events:auto}
+.left,.right{display:flex;align-items:center;gap:14px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;border-radius:999px;background:rgba(255,255,255,.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.25);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;transition:.3s}
+header.light .pill{background:rgba(255,255,255,.55);border-color:rgba(45,47,54,.15)}
+.pill:hover{background:#fff;color:var(--dark);transform:translateY(-2px)}
+.navl a{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;position:relative;padding:4px 0;margin-left:10px}
+.navl a::after{content:"";position:absolute;left:0;bottom:0;height:1px;width:100%;background:currentColor;transform:scaleX(0);transform-origin:right;transition:transform .4s}
+.navl a:hover::after{transform:scaleX(1);transform-origin:left}
+.logo{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:1.6rem;letter-spacing:.28em;text-transform:uppercase;font-weight:500}
+.mark{width:16px;height:22px;position:relative;display:inline-block}
+.mark::before,.mark::after{content:"";position:absolute;background:var(--gold);border-radius:1px}
+.mark::before{left:6px;top:0;width:3px;height:22px}
+.mark::after{left:0;top:6px;width:15px;height:3px}
+.lang{position:relative}
+.lang ul{position:absolute;top:110%;right:0;list-style:none;background:#fff;color:var(--dark);border-radius:18px;padding:8px;min-width:120px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:.25s;box-shadow:0 20px 40px -15px rgba(0,0,0,.4)}
+.lang.open ul{opacity:1;visibility:visible;transform:none}
+.lang li{padding:9px 14px;border-radius:12px;font-size:.8rem;font-weight:700;cursor:pointer}
+.lang li:hover{background:var(--magnolia)}
+.circle{width:44px;height:44px;padding:0;justify-content:center;font-size:1.1rem;letter-spacing:0}
+.burger{display:none}
+.menu{position:fixed;inset:0;background:var(--magnolia);color:var(--dark);z-index:90;padding:120px 40px 40px;display:flex;flex-direction:column;justify-content:space-between;transform:translateY(-100%);transition:transform .7s cubic-bezier(.7,0,.2,1)}
+.menu.open{transform:none}
+.menu ul{list-style:none}
+.menu li{margin-bottom:16px}
+.menu a{font-family:var(--serif);font-size:2.8rem;font-weight:300}
+.menu .cr{display:flex;justify-content:space-between;font-size:.8rem;color:#777}
+
+/* ---------- SCENES ---------- */
+.scene{min-height:100vh;display:flex;align-items:center;padding:120px 6vw 80px;position:relative;overflow:hidden}
+.scene.tall{min-height:170vh;align-items:flex-start}
+.wrap{width:100%;max-width:1300px;margin:0 auto}
+.dark-text{color:var(--dark)}
+.row{display:flex;justify-content:space-between;align-items:flex-end;gap:40px;flex-wrap:wrap}
+.sub{display:flex;align-items:center;gap:12px;font-size:.78rem;letter-spacing:.22em;text-transform:uppercase;font-weight:700;margin-bottom:20px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold)}
+.bordered{border:1px solid currentColor;border-radius:999px;padding:5px 16px}
+.headline{font-family:var(--serif);font-weight:300;font-size:clamp(4.2rem,13vw,12rem);line-height:.9;letter-spacing:-.02em}
+.headline2{font-weight:500;font-size:clamp(1.6rem,3.4vw,3rem);letter-spacing:-.01em;margin-top:10px}
+.big{font-family:var(--serif);font-weight:300;font-size:clamp(2.6rem,6.5vw,6rem);line-height:1;max-width:1000px;margin:0 auto 34px}
+.center{text-align:center}
+.tag{max-width:360px;font-size:clamp(1rem,1.6vw,1.4rem);line-height:1.4;font-weight:500}
+.tag i{font-family:var(--serif);font-size:1.15em}
+.scroll{display:flex;align-items:center;gap:14px;font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;font-weight:700;margin-top:24px}
+.scroll b{width:52px;height:52px;border-radius:50%;border:1px solid currentColor;display:grid;place-items:center;animation:bob 1.8s infinite}
+@keyframes bob{50%{transform:translateY(8px)}}
+.btn{display:inline-flex;align-items:center;gap:12px;padding:18px 36px;border-radius:999px;background:#fff;color:var(--dark);font-weight:700;font-size:.85rem;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 0 0 0 rgba(255,255,255,.7),0 14px 30px -12px rgba(0,0,0,.4);transition:.35s}
+.btn:hover{box-shadow:0 0 0 10px rgba(255,255,255,.35),0 14px 30px -12px rgba(0,0,0,.4);transform:translateY(-3px)}
+.btn.gold{background:var(--gold);color:#fff}
+.side{max-width:420px;font-size:clamp(1rem,1.5vw,1.35rem);line-height:1.45}
+.side .sub{margin-bottom:14px}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(50px);filter:blur(6px);transition:1.2s cubic-bezier(.2,.7,.2,1)}
+.rv.in{opacity:1;transform:none;filter:none}
+.d1{transition-delay:.15s}.d2{transition-delay:.3s}
+
+/* ---------- BUBBLES ---------- */
+.bubbles{position:relative;width:100%;max-width:1300px;margin:40px auto 0;height:130vh}
+.bubble{position:absolute;width:var(--s,170px);height:var(--s,170px);transition:.6s cubic-bezier(.2,.8,.2,1);animation:drift var(--t,7s) ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(var(--dx,14px),var(--dy,-22px))}}
+.bubble .face{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.45),rgba(255,255,255,.08) 55%,rgba(255,255,255,.14));border:1px solid rgba(255,255,255,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:14px;cursor:pointer;transition:.5s;box-shadow:inset 0 0 40px rgba(255,255,255,.12),0 0 40px rgba(110,190,255,.18)}
+.bubble:hover .face{transform:scale(1.07);background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.6),rgba(255,255,255,.12) 55%,rgba(255,255,255,.2))}
+.bubble .t{font-family:var(--serif);font-size:1.45rem;line-height:1;font-weight:500}
+.bubble .p{width:30px;height:30px;border-radius:50%;background:#fff;color:var(--dark);display:grid;place-items:center;font-size:1.2rem;font-weight:500;transition:.4s}
+.bubble.open{z-index:20;animation-play-state:paused}
+.bubble.open .face{display:none}
+.bubble .card{position:absolute;top:0;left:50%;transform:translateX(-50%) scale(.6);width:min(340px,86vw);background:rgba(255,255,255,.96);color:var(--dark);border-radius:28px;padding:26px;opacity:0;visibility:hidden;transition:.5s cubic-bezier(.2,.8,.2,1);box-shadow:0 30px 60px -20px rgba(0,0,0,.6)}
+.bubble.open .card{opacity:1;visibility:visible;transform:translateX(-50%) scale(1)}
+.card h4{font-family:var(--serif);font-size:1.8rem;font-weight:500;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.card h4 button{width:30px;height:30px;border-radius:50%;background:var(--dark);color:#fff;font-size:1rem}
+.card .pt{display:flex;gap:14px;padding:14px 0;border-top:1px solid rgba(45,47,54,.15);font-size:.93rem;line-height:1.5}
+.card .pt span{font-family:var(--serif);color:var(--gold);font-size:1.3rem;line-height:1}
+.bubbles.has-open .bubble:not(.open){opacity:.25;filter:blur(2px)}
+
+/* ---------- MARQUEE ---------- */
+.reassure{overflow:hidden;margin-top:60px;mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.reassure ul{display:flex;gap:60px;width:max-content;list-style:none;animation:slide 26s linear infinite}
+.reassure li{display:flex;flex-direction:column;align-items:center;gap:12px;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;min-width:120px}
+.reassure li i{width:72px;height:72px;border-radius:50%;border:1px solid rgba(255,255,255,.5);display:grid;place-items:center;font-style:normal;font-size:1.7rem;background:rgba(255,255,255,.08)}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+/* ---------- FOOTER ---------- */
+footer{padding:0 14px 14px;position:relative;z-index:5}
+.fbar{background:#000;color:#fff;border-radius:26px;overflow:hidden}
+.ftop{display:flex;align-items:center;justify-content:center;gap:26px;padding:34px 20px;cursor:pointer}
+.ftop .chev{width:38px;height:38px;border-radius:50%;border:1px solid #444;display:grid;place-items:center;transition:.5s}
+.fbar.open .chev{transform:rotate(180deg)}
+.ftop .flogo{font-family:var(--serif);font-size:2rem;letter-spacing:.3em;text-transform:uppercase;display:flex;gap:12px;align-items:center}
+.fbody{max-height:0;overflow:hidden;transition:max-height .7s ease}
+.fin{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:30px;align-items:center;padding:10px 40px 40px}
+.fin ul{list-style:none;display:flex;gap:30px;flex-wrap:wrap}
+.fin ul.r{justify-content:flex-end}
+.fin a{font-size:.75rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:#ddd;transition:.3s}
+.fin a:hover{color:var(--gold)}
+.fin p{font-size:.8rem;color:#999;text-align:center;line-height:1.5}
+.soc{display:flex;gap:14px;justify-content:center;padding-bottom:36px}
+.soc a{width:40px;height:40px;border-radius:50%;border:1px solid #444;display:grid;place-items:center;font-size:.8rem;font-weight:700}
+.soc a:hover{background:var(--gold);border-color:var(--gold)}
+
+/* ---------- RESPONSIVE ---------- */
+@media(max-width:860px){
+  header{padding:14px 16px}
+  .navl,.login,.lang,.left .pill{display:none}
+  .burger{display:inline-flex}
+  .logo{font-size:1.1rem}
+  .scene{padding:110px 22px 60px}
+  .row{flex-direction:column;align-items:flex-start}
+  .bubbles{height:auto;display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-bottom:60px}
+  .bubble{position:relative !important;left:auto !important;top:auto !important;width:100%;height:auto;aspect-ratio:1;animation:none}
+  .bubble .card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.6)}
+  .bubble.open .card{transform:translate(-50%,-50%) scale(1)}
+  .scene.tall{min-height:auto}
+  .fin{grid-template-columns:1fr;text-align:center}
+  .fin ul,.fin ul.r{justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body class="locked">
+
+<!-- LOADER -->
+<div class="loader" id="loader">
+  <div class="brand">Grace Fellowship</div>
+  <div class="mid">
+    <div class="l-cross"></div>
+    <div class="bar"><div class="line"></div><div class="fill" id="lfill"></div><div class="pct" id="lpct">0</div></div>
+  </div>
+  <div class="hint" id="lhint">Click anywhere to enable worship music</div>
+</div>
+
+<!-- HEADER -->
+<header id="hdr">
+  <div class="left">
+    <a href="#give" class="pill" id="leftbtn">Give</a>
+    <nav class="navl"><a href="#beliefs">Beliefs</a><a href="#visit">Visit</a></nav>
+  </div>
+  <a href="#top" class="logo"><span class="mark"></span>Grace</a>
+  <div class="right">
+    <a href="#" class="navl login"><span style="font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700">Member Login</span></a>
+    <div class="lang" id="lang">
+      <button class="pill" id="langbtn">EN ▾</button>
+      <ul><li>EN</li><li>മലയാളം</li><li>हिन्दी</li><li>தமிழ்</li></ul>
+    </div>
+    <a href="#visit" class="pill circle" aria-label="Prayer">🙏</a>
+    <button class="pill circle burger" id="burger" aria-label="Menu">≡</button>
+  </div>
+</header>
+
+<div class="menu" id="menu">
+  <ul>
+    <li><a href="#top">Home</a></li>
+    <li><a href="#beliefs">Beliefs</a></li>
+    <li><a href="#visit">Plan a Visit</a></li>
+    <li><a href="#give">Give</a></li>
+  </ul>
+  <div class="cr"><span>Grace Fellowship</span><span>©2026</span></div>
+</div>
+
+<div id="bg"></div>
+<canvas id="fx"></canvas>
+
+<main>
+
+<!-- 0 · SPACE / HEAVEN -->
+<section class="scene" id="top" data-colors="#090b18,#171833" data-theme="dark">
+  <div class="wrap row">
+    <div>
+      <div class="sub rv"><span class="dot"></span>From heaven <span class="bordered">to heart</span></div>
+      <h1 class="headline rv d1">Fa<em>i</em>th</h1>
+      <div class="headline2 rv d2">begins here.</div>
+    </div>
+    <div class="rv d2">
+      <p class="tag">Journey into the <i>wonderful world</i> of Grace Fellowship</p>
+      <div class="scroll">scroll to begin <b>↓</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- 1 · SKY -->
+<section class="scene" data-colors="#789fc7,#b8c9e2" data-theme="light">
+  <div class="wrap center dark-text">
+    <div class="sub rv" style="justify-content:center">Hope · Grace · Truth</div>
+    <h2 class="big rv d1">The only hope you will <em>ever</em> need.</h2>
+    <a href="#visit" class="btn rv d2">Plan a visit →</a>
+    <div class="side rv d2" style="margin:60px 0 0 auto;text-align:left">
+      <div class="sub"><span class="bordered">Scripture</span> centered</div>
+      <p>Grace Fellowship is built on two foundations: the Word of God and the love of Jesus Christ.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · SKY → DAWN -->
+<section class="scene" data-colors="#e7e6f0,#f3eee8" data-theme="light">
+  <div class="wrap center dark-text">
+    <div class="sub rv" style="justify-content:center">100% free &amp; welcoming</div>
+    <h2 class="big rv d1">Grace freely given to <em>every</em> soul.</h2>
+    <div class="side rv d2" style="margin:40px auto 0;text-align:center">
+      <div class="sub" style="justify-content:center"><span class="bordered">Open doors</span> for all</div>
+      <p>No matter your background, your questions, or your past — there is a seat at our table. Come as you are.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · DEEP WATERS (BUBBLES) -->
+<section class="scene tall" id="beliefs" data-colors="#0b2d43,#061b2b" data-theme="dark">
+  <div class="wrap">
+    <div class="row">
+      <div>
+        <h2 class="headline rv" style="font-size:clamp(3.4rem,9vw,8rem)">Th<em>e</em> living</h2>
+        <div class="headline2 rv d1">water.</div>
+      </div>
+      <div class="side rv d2">
+        <div class="sub">discover what we <span class="bordered">believe</span></div>
+        <p>Tap each bubble to explore the heart of our faith, and dive deeper.</p>
+      </div>
+    </div>
+    <div class="bubbles" id="bubbles"></div>
+  </div>
+</section>
+
+<!-- 4 · MARQUEE -->
+<section class="scene" data-colors="#061b2b,#040d17" data-theme="dark">
+  <div class="wrap center">
+    <div class="sub rv" style="justify-content:center">the gift of community</div>
+    <h2 class="big rv d1">100% biblical and <em>warmly</em> human.</h2>
+    <div class="reassure rv d2">
+      <ul id="marq"></ul>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · CTA -->
+<section class="scene" id="visit" data-colors="#e7e6f0,#f1e7d4" data-theme="light">
+  <div class="wrap row dark-text">
+    <div>
+      <h2 class="headline rv">A better y<em>o</em>u</h2>
+      <div class="headline2 rv d1">starts here</div>
+    </div>
+    <div class="rv d2" id="give">
+      <p class="tag" style="margin-bottom:26px">Sundays at <b>9:00 &amp; 11:00 AM</b>. Wednesday prayer at 7 PM. Friday youth night at 6:30 PM.</p>
+      <a href="#" class="btn gold">Join us Sunday →</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="fbar" id="fbar">
+    <div class="ftop" id="ftop">
+      <span class="chev">⌃</span>
+      <span class="flogo"><span class="mark"></span>Grace</span>
+      <span class="chev">⌃</span>
+    </div>
+    <div class="fbody" id="fbody">
+      <div class="fin">
+        <ul><li><a href="mailto:hello@yourchurch.org">Contact</a></li><li><a href="#">Volunteer</a></li><li><a href="#">Prayer Request</a></li></ul>
+        <p>"Scripture quotations are shared for encouragement. Grace Fellowship is a non-profit church; all gifts are voluntary."</p>
+        <ul class="r"><li><a href="#">Sermons</a></li><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul>
+      </div>
+      <div class="soc"><a href="#">FB</a><a href="#">IG</a><a href="#">YT</a></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ---------- DATA ---------- */
+const beliefs=[
+  ["Scripture","The Bible is God's inspired Word and our guide for life.","We read it, study it, and let it shape how we love."],
+  ["Jesus","Jesus is the Son of God, fully God and fully man.","He died for our sins and rose again on the third day."],
+  ["Grace","Salvation is a free gift, received by faith alone.","We are forgiven, made new, and welcomed home."],
+  ["Holy Spirit","The Spirit lives in every believer to guide and comfort.","He grows love, joy, peace, and patience in us."],
+  ["Prayer","Prayer is a daily conversation with our loving Father.","We pray together, for each other and our city."],
+  ["Community","The church is a family, not just a Sunday event.","Small groups meet weekly to share meals and burdens."],
+  ["Worship","We worship in song, in service, and in everyday life.","Every gift, big or small, is offered to glorify God."],
+  ["Mission","We are sent to love our neighbors as ourselves.","Food drives, mentoring, and outreach near and far."]
+];
+const marq=[["✝","Bible-based"],["♡","All welcome"],["☀","Hope-filled"],["♪","Live worship"],["❖","Family friendly"],["✦","Free to attend"],["☩","Prayer team"],["✿","Kids ministry"]];
+
+/* ---------- BUILD BUBBLES ---------- */
+const pos=[[4,4,190],[34,0,160],[64,6,200],[84,18,150],[10,34,170],[44,30,210],[74,46,170],[28,62,190]];
+const bw=document.getElementById('bubbles');
+beliefs.forEach((b,i)=>{
+  const [l,t,s]=pos[i];
+  const el=document.createElement('div');
+  el.className='bubble';
+  el.style.cssText=`left:${l}%;top:${t}%;--s:${s}px;--t:${6+i%4}s;--dx:${(i%2?-1:1)*16}px;--dy:${-14-i*3}px`;
+  el.innerHTML=`<div class="face"><div class="t">${b[0]}</div><div class="p">+</div></div>
+  <div class="card"><h4>${b[0]}<button aria-label="Close">×</button></h4>
+  <div class="pt"><span>01</span><p>${b[1]}</p></div><div class="pt"><span>02</span><p>${b[2]}</p></div></div>`;
+  const close=()=>{el.classList.remove('open');bw.classList.remove('has-open')};
+  el.querySelector('.face').onclick=()=>{
+    bw.querySelectorAll('.bubble').forEach(x=>x.classList.remove('open'));
+    el.classList.add('open');bw.classList.add('has-open');
+  };
+  el.querySelector('button').onclick=e=>{e.stopPropagation();close()};
+  bw.appendChild(el);
+});
+const mq=document.getElementById('marq');
+mq.innerHTML=[...marq,...marq].map(m=>`<li><i>${m[0]}</i>${m[1]}</li>`).join('');
+
+/* ---------- LOADER ---------- */
+const loader=document.getElementById('loader'),lfill=document.getElementById('lfill'),lpct=document.getElementById('lpct');
+let p=0;const bar=260;
+const tick=setInterval(()=>{
+  p+=Math.random()*7+2;
+  if(p>=100){p=100;clearInterval(tick);lpct.textContent='complete';
+    setTimeout(()=>{loader.classList.add('done');document.body.classList.remove('locked')},700)}
+  else lpct.textContent=Math.floor(p);
+  lfill.style.width=(p/100*bar)+'px';
+},90);
+document.getElementById('lhint').onclick=()=>{};
+
+/* ---------- HEADER / MENU / LANG / FOOTER ---------- */
+const hdr=document.getElementById('hdr'),menu=document.getElementById('menu');
+document.getElementById('burger').onclick=()=>{menu.classList.toggle('open');document.body.classList.toggle('locked',menu.classList.contains('open'))};
+menu.querySelectorAll('a').forEach(a=>a.onclick=()=>{menu.classList.remove('open');document.body.classList.remove('locked')});
+const lang=document.getElementById('lang');
+document.getElementById('langbtn').onclick=e=>{e.stopPropagation();lang.classList.toggle('open')};
+lang.querySelectorAll('li').forEach(li=>li.onclick=()=>{document.getElementById('langbtn').textContent=li.textContent.slice(0,2).toUpperCase()+' ▾';lang.classList.remove('open')});
+document.addEventListener('click',()=>lang.classList.remove('open'));
+const fbar=document.getElementById('fbar'),fbody=document.getElementById('fbody');
+document.getElementById('ftop').onclick=()=>{
+  fbar.classList.toggle('open');
+  fbody.style.maxHeight=fbar.classList.contains('open')?fbody.scrollHeight+'px':0;
+  if(fbar.classList.contains('open'))setTimeout(()=>scrollTo({top:document.body.scrollHeight,behavior:'smooth'}),100);
+};
+
+/* ---------- SCROLL BACKGROUND ---------- */
+const bg=document.getElementById('bg');
+const scenes=[...document.querySelectorAll('.scene')];
+const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const mix=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+const css=c=>`rgb(${c.join(',')})`;
+function updateBg(){
+  const c=scrollY+innerHeight*.5;
+  const cs=scenes.map(s=>{const r=s.getBoundingClientRect();return{y:r.top+scrollY+r.height/2,top:hex(s.dataset.colors.split(',')[0]),bot:hex(s.dataset.colors.split(',')[1]),theme:s.dataset.theme}});
+  let i=0;while(i<cs.length-1&&c>cs[i+1].y)i++;
+  let a=cs[i],b=cs[Math.min(i+1,cs.length-1)];
+  let t=a===b?0:Math.min(1,Math.max(0,(c-a.y)/(b.y-a.y)));
+  t=t*t*(3-2*t);
+  bg.style.background=`linear-gradient(180deg,${css(mix(a.top,b.top,t))},${css(mix(a.bot,b.bot,t))})`;
+  const cur=t<.5?a:b;
+  hdr.classList.toggle('light',cur.theme==='light');
+  window.__depth=cur===cs[0]?'space':(cur.theme==='dark'?'deep':'sky');
+}
+addEventListener('scroll',updateBg,{passive:true});addEventListener('resize',updateBg);updateBg();
+
+/* ---------- REVEAL ---------- */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.2});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+
+/* ---------- GSAP SCROLLTRIGGER ---------- */
+if(window.gsap&&window.ScrollTrigger&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+  gsap.registerPlugin(ScrollTrigger);
+
+  gsap.utils.toArray('.scene').forEach((scene,sectionIndex)=>{
+    const items=gsap.utils.toArray(scene.querySelectorAll('.rv'));
+
+    items.forEach((el,index)=>{
+      gsap.set(el,{autoAlpha:0,y:sectionIndex%2?38:58,scale:.985,filter:'blur(7px)'});
+      gsap.to(el,{
+        autoAlpha:1,y:0,scale:1,filter:'blur(0px)',
+        duration:1.15,
+        delay:index*.12,
+        ease:'power3.out',
+        scrollTrigger:{
+          trigger:scene,
+          start:'top 82%',
+          toggleActions:'play none none reverse'
+        }
+      });
+    });
+  });
+
+  document.querySelectorAll('.scene').forEach((scene,index)=>{
+    const content=scene.querySelector('.wrap');
+    if(!content)return;
+    gsap.fromTo(content,
+      {y:index%2===0?36:-24,scale:.985},
+      {y:index%2===0?-36:24,scale:1,ease:'none',scrollTrigger:{
+        trigger:scene,
+        start:'top bottom',
+        end:'bottom top',
+        scrub:1,
+        invalidateOnRefresh:true
+      }}
+    );
+  });
+
+  document.querySelectorAll('.bubble').forEach((bubble,index)=>{
+    gsap.fromTo(bubble,
+      {opacity:0,scale:.72},
+      {opacity:1,scale:1,duration:.9,delay:(index%4)*.08,ease:'back.out(1.4)',scrollTrigger:{
+        trigger:'.bubbles',
+        start:'top 80%',
+        toggleActions:'play none none reverse'
+      }}
+    );
+  });
+
+  ScrollTrigger.refresh();
+}
+
+/* ---------- PARTICLES: stars (top) + bubbles (deep) ---------- */
+const cv=document.getElementById('fx'),cx=cv.getContext('2d');
+let W,H,stars=[],bubs=[];
+function size(){W=cv.width=innerWidth;H=cv.height=innerHeight;
+  stars=Array.from({length:130},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.4+.3,s:Math.random()*2+.5}));
+  bubs=Array.from({length:40},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*10+3,v:Math.random()*.6+.2}));}
+size();addEventListener('resize',size);
+let sa=1,ba=0;
+(function draw(tm){
+  cx.clearRect(0,0,W,H);
+  const d=window.__depth;
+  sa+=((d==='space'?1:0)-sa)*.05;
+  ba+=((d==='deep'?1:0)-ba)*.05;
+  if(sa>.01){cx.fillStyle='#fff';stars.forEach(s=>{cx.globalAlpha=sa*(.4+.6*Math.abs(Math.sin(tm/1000*s.s+s.x)));cx.beginPath();cx.arc(s.x,s.y,s.r,0,6.3);cx.fill()})}
+  if(ba>.01){bubs.forEach(b=>{b.y-=b.v;b.x+=Math.sin(tm/900+b.y/60)*.3;if(b.y<-20){b.y=H+20;b.x=Math.random()*W}
+    cx.globalAlpha=ba*.45;cx.strokeStyle='#bfe6ff';cx.lineWidth=1.2;cx.beginPath();cx.arc(b.x,b.y,b.r,0,6.3);cx.stroke();
+    cx.globalAlpha=ba*.5;cx.fillStyle='#fff';cx.beginPath();cx.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.18,0,6.3);cx.fill()})}
+  cx.globalAlpha=1;requestAnimationFrame(draw);
+})(0);
+</script>
+</body>
+</html>
