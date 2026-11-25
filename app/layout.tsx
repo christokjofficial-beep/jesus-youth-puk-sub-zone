@@ -154,8 +154,6 @@ export default function RootLayout({
               <div className="loader__sprite-container">
                 <div className="loader__sprite-container__child js-loader:container">
                   <div className="loader__sprite js-loader:sprite">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/images/atlas.png" alt="Loading animation" />
                   </div>
                 </div>
                 <div className="loader__reveal js-loader:reveal">
@@ -197,8 +195,6 @@ export default function RootLayout({
           <div className="loader__sprite-container">
             <div className="loader__sprite-container__child">
               <div className="loader__sprite">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/atlas.png" alt="Loading animation" />
               </div>
             </div>
           </div>

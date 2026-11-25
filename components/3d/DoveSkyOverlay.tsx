@@ -51,16 +51,28 @@ export default function DoveSkyOverlay() {
   const glow = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Load after the engine has had a head start (the scene is ~30 MB)
+  // Start downloading once the engine has finished its own assets (the loader's "AssetsLoaded", flagged in
+  // js-25cd474e.js), so the two never compete for bandwidth; the visitor is still on the loader/statue then.
   useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 2500);
-    return () => clearTimeout(t);
+    const w = window as unknown as { __jyEngineLoaded?: boolean };
+    const since = performance.now();
+    const t = setInterval(() => {
+      if (w.__jyEngineLoaded || performance.now() - since > 20000) {
+        setMounted(true);
+        clearInterval(t);
+      }
+    }, 300);
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
     let raf = 0;
     let maskFor = 0;
+    // Phone browsers change innerHeight while their toolbar hides/shows during scrolling; timing and the waterline
+    // use the largest height seen at this width (the iframe is 100lvh tall), so nothing jumps mid-scroll.
+    let vhStable = 0;
+    let vhFor = 0;
     let mask = "";
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const engine = window as unknown as { __jyPauseEngine?: boolean };
@@ -72,7 +84,11 @@ export default function DoveSkyOverlay() {
       const sky = document.querySelector<HTMLElement>(".js-section-sky");
       const water = document.querySelector<HTMLElement>(".js-section-underwater");
       if (!el || !line.current || !glow.current || !scroller || !statue || !sky || !water) return;
-      const vh = window.innerHeight;
+      if (window.innerWidth !== vhFor) {
+        vhFor = window.innerWidth;
+        vhStable = window.innerHeight;
+      } else vhStable = Math.max(vhStable, window.innerHeight);
+      const vh = vhStable;
       const y = scroller.scrollTop;
       // Clouds roll in over the last stretch of the statue scene and fully cover it before the engine switches to
       // the sky (instantly, landing at skyLand); the dove leaves the cloud from there.
@@ -148,7 +164,7 @@ export default function DoveSkyOverlay() {
           position: "fixed",
           inset: 0,
           width: "100%",
-          height: "100%",
+          height: "100lvh", // fixed size while the phone toolbar hides/shows (no canvas resize mid-scroll)
           border: 0,
           zIndex: 2,
           pointerEvents: "none",

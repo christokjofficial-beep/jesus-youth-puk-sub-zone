@@ -1,62 +1,42 @@
 # Landing Page – Everything Currently Used
 
-Engine: prebuilt WebGL bundle `public/build/js-25cd474e.js`, injected by `components/3d/WebGLEngineLoader.tsx`.
-Assets live in `public/webgl/`, `public/images/`, `public/video/`, `public/resources/`.
-Refer to items by number (e.g. "change 9", "remove 31").
+Measured by scrolling the whole page on a phone (390×844) and a desktop (1440×900): every file listed here is
+downloaded, and nothing else in `public/` is. Total ≈ 25 MB per visit. Refer to items by number (e.g. "change 9").
 
-## A. Page scenes (scroll order, `app/page.tsx`)
-1. Space scene (hero) – "A Missionary Movement of the Church", "Jesus Youth Global.", "Sent to 40+ nations", "scroll to enter the waters" button
-2. Sky · Station 0 – "The Holy Spirit descends as a luminous dove."
-3. Sky · Station 1 – "The Six Pillars of Jesus Youth Lifestyle."
-4. Underwater · Station 0 – The Jordan Immersion
-5. Underwater · Station 1 – Sacraments & Catholic lifestyle practices
-6. Underwater · Station 2 – The Great Commission
-7. Audio toggle – `resources/assets/audio/audio.mp3`
-8. Footer – video `video/footer.m4v`
+## A. Page flow (scroll order)
+1. Statue scene (engine) – "Jesus Youth Global." hero, Christ statue on the mountain
+2. Clouds roll in over the statue → dove scene (`public/dove-scene.html`, shown by `components/3d/DoveSkyOverlay.tsx`)
+3. Dove descends from the cloud and rests above Jesus in the river
+4. Camera comes down to the river; a waterline rises into the underwater scene
+5. Underwater scene (engine) – the Six Pillars bubbles, stones, big fish, "Go into all the world." ending
 
-## B. 3D models (`public/webgl/models/`)
-### Sacred / hero objects
-9. `christ-redeemer.glb` – Christ statue
-10. `logo.glb` – 3D logo
-11. `pillar.glb`, `pillara2x.glb` – pillars
-12. `arches.glb`, `wall.glb`, `step.glb`, `stonefloor.glb` – stone architecture
-13. `jar.glb` – jar
-14. `pill.glb`, `product-pill.glb` – pill / capsule
-15. `orb.glb`, `orb-001.glb`, `orb-003.glb`, `orb-004.glb`, `pearl.glb` – glowing orbs, pearl
+## B. Code
+6. `public/build/js-25cd474e.js` – WebGL engine (statue + underwater scenes), loaded by `components/3d/WebGLEngineLoader.tsx`
+7. `public/build/meshopt_decoder.module.js` – decoder for the compressed statue model
+8. `public/build/style-70bb85ec.css`, `public/build/jquery.min.js` – engine stylesheet and its jQuery dependency
+9. `public/basis/` – decoder for the `.ktx2` textures
+10. Dove scene libraries – three.js r170 from unpkg (`three.module.min.js`, GLTFLoader, Water, post-processing)
 
-### Sky / land
-16. `mountain.glb`, `rock-floating.glb`, `icelandic-boulder.glb` – mountain, rocks
-17. `coralsky-001.glb` – sky coral shapes
+## C. Models (`public/webgl/models/`)
+11. `jar.glb` – the Christ statue (lossless meshopt compression)
+12. `mountain.glb` – the mountain under the statue
+13. `baptism/jesus-rigged.glb` – Jesus in the river (dove scene)
+14. `baptism/white-dove-rig.glb` – the dove (dove scene)
+15. `floor0.glb`, `floor1.glb`, `floor2.glb`, `stonefloor.glb` – sea floor
+16. `icelandic-boulder.glb`, `pillar.glb`, `wall.glb`, `arches.glb` – underwater rocks, standing stones, walls, arch
+17. `fishbig.glb` – the big fish
 
-### Underwater
-18. `water.glb` – water surface
-19. `floor0.glb`, `floor1.glb`, `floor2.glb` – sea floor
-20. `coral0.glb`–`coral4.glb`, `coral-9.glb`, `coral1-001.glb` – corals
-21. `seaweedgreen.glb`, `seaweedpink.glb` – seaweed
-22. `seashell.glb`, `shell.glb` – shells
-23. `fishbig.glb`, `fish-shoal.glb` – big fish, school of fish
-24. `bubbles.glb`, `bubble-1.glb`, `smallbubblesfrompill.glb` – bubbles
+## D. Textures (`public/webgl/textures/`)
+18. Statue: `jar/stone_diffuse_cgtrader.webp`, `jar/jar_Normal_cgtrader.jpg`, `jar/stone_matcap.png`, `jar/gold_alpha3.png`, `jar/shadow_clean.png`, `mountain/*`, `space-v11.hdr` (reflections)
+19. Statue backdrop: `spaceCubeMap/px.jpg`, `nx.jpg`, `pz.jpg`, `py.ktx2`
+20. Dove scene: `envMap/*` (reflections), `cloud-01.png` (clouds), `waternormals.jpg` (river)
+21. Underwater: `floor/*`, `underwaterBoulder/*`, `underwaterPillar/*`, `underwaterRockWall/*`, `underwaterArches/*`, `underwaterStoneFloor/*`, `bigFish/*`, `bubbleSeaweed/*` (inside the pillar bubbles), `waternormals.ktx2` (surface from below)
+22. Shared: `matcaps/*`, `noise.ktx2`, `noiseTexture.ktx2`, `gradient-noise.ktx2` (light rays), `smoke.ktx2`, `dust.jpg`
 
-## C. Textures, images, effects
-25. Sky environment cube map – `webgl/textures/envMap/px|nx|py|ny|pz|nz.png`
-26. Clouds – `webgl/textures/cloud-01.png`, `build/pink-clouds-2-*.png`, `build/pink-clouds-bg-*.png`
-27. God rays – `images/godray.png`, `images/godray2.png`
-28. Dust / noise – `webgl/textures/dust.jpg`, `noise.ktx2`, `noiseTexture.ktx2`, `gradient-noise.ktx2`
-29. Matcaps (shiny finishes) – `webgl/textures/matcaps/*`, `jar/*`, `logo/*`, `pill/*`, `shell/pearl-matcap.ktx2`
-30. Model textures – `bigFish/`, `fish-shoal/`, `corals/`, `coralSky/`, `seaweed/`, `bubbleSeaweed/`, `productBubbleSeaweed/`, `seashell/`, `shell/`, `floor/`, `mountain/`
-31. Scroll image sequence – `images/sequence/`
-32. Leftover product-site images – `images/product-affirm.jpg`, `pill-capture.png`, `vegan-icon.png`, `gluten-icon.png`, `gmo-icon.png`, `preservatives-icon.png`, `usa-icon.png`, `canada-icon.png`, `atlas.png`
-33. Loose files in `public/` root – `statue_crop*.png`, `our_face_zoom*.png`, `face_wireframe*.png`, `head_tight_crop.png`, `feet_actual_crop.png`, `christ_stone_live.png`, `arch_texture.jpg`, `side_by_side_comparison.png`, `user_face_zoom.png` (work images, likely unused by the page)
-
-## D. Engine / support files (`public/build/`)
-34. `js-25cd474e.js` – main WebGL engine
-35. `AffirmGui-*.js`, `GuiBase-*.js`, `ProductGui-*.js` – product UI modules
-36. `jquery.min.js`, `style-70bb85ec.css`, `mark-*.png`
-37. `public/basis/` – texture decoder for `.ktx2`
-
-Sizes: models+textures ≈ 41 MB, video ≈ 14 MB, images ≈ 8 MB.
+## E. Fonts (`public/fonts/`)
+23. Fracktif, Manrope, Mauren (`.woff2`; the `.woff` files are fallbacks for old browsers)
 
 ## Risk
-The engine (34–35) and several assets (13, 14, 32) appear to come from Organimo's commercial site. Using their compiled code and models is a copyright/licensing risk. Plan: keep the scene structure (1–8), replace B–D with original baptism / dove / Jordan assets.
-
-Descriptions are inferred from file names and section comments; the engine code was not inspected to confirm which files it actually loads.
+The engine (6) and several models and textures (11, 12, 15–17, 18–22) come from Organimo's commercial site.
+Using their compiled code and assets is a copyright/licensing risk. Plan: keep the scene structure (A) and
+replace them with original statue, river and underwater assets.

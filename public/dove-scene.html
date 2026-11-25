@@ -27,16 +27,15 @@ html.embed #load{background:#fff;color:transparent}
 <div id="hint" aria-hidden="true"></div>
 <div id="mist" aria-hidden="true"></div>
 
-<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.170.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.170.0/examples/jsm/"}}</script>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.170.0/build/three.module.min.js","three/addons/":"https://unpkg.com/three@0.170.0/examples/jsm/"}}</script>
 <script>if(new URLSearchParams(location.search).has("embed"))document.documentElement.classList.add("embed");</script>
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {Water} from 'three/addons/objects/Water.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
-import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -72,7 +71,7 @@ scene.add(new THREE.HemisphereLight(0xb9a7e6,0x3a2a55,.55));
 
 // River surface with live reflections of the sky, shore and Jesus
 const waterNormals=new THREE.TextureLoader().load('/webgl/textures/waternormals.jpg',t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;});
-const water=new Water(new THREE.CircleGeometry(1500,48),{textureWidth:1024,textureHeight:1024,waterNormals,sunDirection:SUN.clone(),sunColor:0xffd3ea,waterColor:0x2a2150,distortionScale:.4,alpha:1,fog:true});
+const water=new Water(new THREE.CircleGeometry(1500,48),{textureWidth:innerWidth>900?1024:512,textureHeight:innerWidth>900?1024:512,waterNormals,sunDirection:SUN.clone(),sunColor:0xffd3ea,waterColor:0x2a2150,distortionScale:.4,alpha:1,fog:true});
 water.rotation.x=-Math.PI/2; water.material.uniforms.size.value=6; scene.add(water);
 
 
@@ -97,10 +96,9 @@ const rings=[0,1,2].map(()=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1)
 // ---- Load everything ----
 const files={jesus:3,dove:4};const prog={};
 const tick=(k,e)=>{if(e.total){prog[k]=e.loaded/e.total;const w=Object.values(files).reduce((a,b)=>a+b);document.getElementById('load').textContent=Math.round(Object.keys(files).reduce((a,k)=>a+(prog[k]||0)*files[k],0)/w*100)+'%';}};
+// models are meshopt-compressed (lossless), hence the decoder on the loader below
 const big=Math.min(renderer.capabilities.maxTextureSize,8192)>=8192&&innerWidth>900;
-const loadTex=(url,k)=>new Promise((r,j)=>new THREE.TextureLoader().load(url,r,e=>tick(k,e),j));
-const loadHDR=(url,k)=>new Promise((r,j)=>new RGBELoader().load(url,r,e=>tick(k,e),j));
-const gltf=new GLTFLoader();const loadGLB=(url,k)=>new Promise((r,j)=>gltf.load(url,g=>r(g.scene),e=>tick(k,e),j));
+const gltf=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);const loadGLB=(url,k)=>new Promise((r,j)=>gltf.load(url,g=>r(g.scene),e=>tick(k,e),j));
 let J,D;
 try{[J,D]=await Promise.all([
   loadGLB('/webgl/models/baptism/jesus-rigged.glb','jesus'),
@@ -155,7 +153,7 @@ const ld=document.getElementById('load');ld.style.opacity=0;setTimeout(()=>ld.re
 const EMBED=document.documentElement.classList.contains("embed");
 let target=0,p=0,qT=0,q=0;
 // Embedded: the homepage sends overall progress q (0..1): cloud screen -> dove scene -> dive underwater
-let pT=0,diveT=0,qIn=0,sinkT=0,sink=0;
+let pT=0,diveT=0,qIn=0,fadeS=0,sinkT=0,sink=0;
 let onScreen=true;
 addEventListener("message",e=>{if(e.origin===location.origin&&e.data&&typeof e.data.p==="number"){pT=e.data.p;diveT=e.data.dive||0;sinkT=e.data.sink||0;qIn=e.data.fade||0;onScreen=e.data.on!==false;}});
 const mist=document.getElementById("mist");
@@ -164,6 +162,7 @@ addEventListener('scroll',onScroll,{passive:true});onScroll();
 function resize(){renderer.setSize(innerWidth,innerHeight,false);composer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.fov=camera.aspect<.8?54:36;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 
+const ease=(k,dt)=>1-Math.exp(-k*dt);   // per-second smoothing rate -> per-frame factor
 const ss=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
 const L=(a,b,t)=>a+(b-a)*t;
 const HEAD=jesus.position.y+1.8;
@@ -183,14 +182,15 @@ renderer.setAnimationLoop(()=>{
   const t=clock.getElapsedTime(),dt=Math.min(.05,t-lastT);lastT=t;
   if(window.__p!==undefined&&window.__p!==window.__lp){p=target=window.__lp=window.__p;camInit=false;} // screenshot hook
   let dive=0;
-  if(EMBED){q+=(pT-q)*(reduce?1:.08);target=q;p=q;dive=diveT;sink+=(sinkT-sink)*(reduce?1:.25);}
-  else p+=(target-p)*(reduce?1:.06);
+  if(EMBED){q+=(pT-q)*(reduce?1:ease(5,dt));target=q;p=q;dive=diveT;sink+=(sinkT-sink)*(reduce?1:ease(17,dt));}
+  else p+=(target-p)*(reduce?1:ease(3.7,dt));
   water.material.uniforms.time.value=reduce?0:t*.3; skyMat.uniforms.t.value=t;
 
   const fly=ss(.01,.45,p), land=ss(.41,.52,p), open=ss(0,.2,p)*.6+ss(.62,1,p)*.4;
-  mist.style.opacity=1-ss(.01,.08,p);
+  mist.style.opacity=1-ss(.01,.12,p);
   // Statue -> clouds: as the layer fades in, the cloud bank rushes toward the camera and closes around it
-  if(EMBED){const k=qIn;mist.style.transform=`scale(${L(1.8,1,k)}) translateY(${L(18,0,k)}%)`;}      // the full fog (continuing the statue scene cloud) thins as the dove breaks out
+  // eased, so the zoom never follows each touch-scroll step
+  if(EMBED){fadeS+=(qIn-fadeS)*(reduce?1:ease(8,dt));const k=fadeS;mist.style.transform=`scale(${L(1.8,1,k)}) translateY(${L(18,0,k)}%)`;}      // the full fog (continuing the statue scene cloud) thins as the dove breaks out
 
   // Cloud: glowing from within, then it slowly parts once the dove has left it
   const part=ss(.04,.3,p);
@@ -214,7 +214,7 @@ renderer.setAnimationLoop(()=>{
   // banked into each turn (roll from turn rate), then upright and facing us in the flare and hover
   const yaw=Math.atan2(T.x,T.z); let turn=yaw-yawPrev; turn=Math.atan2(Math.sin(turn),Math.cos(turn)); yawPrev=yaw;
   const glideAngle=Math.asin(Math.min(1,Math.max(-1,-T.y)));    // >0 when descending
-  bankS+=(THREE.MathUtils.clamp(-turn*55,-.75,.75)-bankS)*.12;
+  bankS+=(THREE.MathUtils.clamp(-turn*55,-.75,.75)-bankS)*ease(7.7,dt);
   const pitchGlide=2.45+down*.06*amp;                           // classic descending dove: body vertical, head toward the ground (1.05 = level)
   const pitch=L(L(pitchGlide,.18,flare),.42,land);
   const air=1-land;                                             // turbulence while flying, gentle station-keeping in the hover
@@ -234,7 +234,7 @@ renderer.setAnimationLoop(()=>{
   poseE(db,'Bone_020',0,0, strokeA-trim); poseE(db,'Bone_018',0,-sweep,tipZ);
   poseE(db,'Bone_011',(down-.5)*.1*amp-glideW*.06+flare*.35,Math.sin(t*1.6)*.14*air+Math.sin(t*.7)*.05,0);  // tail steers side to side  // tail trims in the glide, fans down as an air brake
   // Head: held level and looking ahead while the body pitches (the model's neck rests upright)
-  const lift=Math.min(pitch-.42,.7); poseE(db,'Bone_015',-lift*.4-(down-.5)*.06*amp,Math.sin(t*.9)*.3*(.4+.6*land)+Math.sin(t*2.6)*.06,Math.sin(t*1.1)*.08);  // head stays steady against the wingbeats, looks about pose(db,'Bone_013',1,0,0,-lift*.25);
+  const lift=Math.min(pitch-.42,.7); poseE(db,'Bone_015',-lift*.4-(down-.5)*.06*amp,Math.sin(t*.9)*.3*(.4+.6*land)+Math.sin(t*2.6)*.06,Math.sin(t*1.1)*.08); pose(db,'Bone_013',1,0,0,-lift*.25);  // head stays steady against the wingbeats, looks about
   doveGlow.position.copy(P); doveGlow.material.opacity=land*.18;
   doveFill.position.copy(camera.position).sub(P).setLength(.9).add(P); doveFill.position.y-=.3;
 
@@ -247,7 +247,7 @@ renderer.setAnimationLoop(()=>{
   // Heaven's light
   beamMat.uniforms.o.value=ss(.38,.7,p); beamMat.uniforms.t.value=t;
   motes.material.opacity=ss(.38,.7,p)*.45;
-  for(let i=0;i<N;i++){mp[i*3+1]-=reduce?0:.005;mp[i*3]+=Math.sin(t*.5+seed[i])*.0006;if(mp[i*3+1]<0)mp[i*3+1]=4;}mg.attributes.position.needsUpdate=true;
+  if(motes.material.opacity>0)for(let i=0;i<N;i++){mp[i*3+1]-=reduce?0:.005;mp[i*3]+=Math.sin(t*.5+seed[i])*.0006;if(mp[i*3+1]<0)mp[i*3+1]=4;mg.attributes.position.needsUpdate=true;}
   rings.forEach((r,i)=>{const k=(t*.2+i/3)%1;r.scale.setScalar(.5+k*2.6);r.material.opacity=(1-k)*(.1+open*.3);});
   bloom.strength=.1+open*.08;
 
@@ -257,9 +257,9 @@ renderer.setAnimationLoop(()=>{
   // Calm camera: it no longer chases the dove (that made the whole sky and water jitter); it rises gently
   // from a low wide view looking up into the sky and tilts down as the dove comes to Jesus
   const tilt=ss(.03,.54,p);
-  if(!camInit)followY=P.y; else followY+=(P.y-followY)*(reduce?1:.06);                     // heavily smoothed height, so scroll steps never jolt the view
+  if(!camInit)followY=P.y; else followY+=(P.y-followY)*(reduce?1:ease(3.7,dt));                     // heavily smoothed height, so scroll steps never jolt the view
   camP.set(0,followY-.7,3.6).lerp(closeP,ss(.34,.56,p));
-  if(!camInit||reduce){camera.position.copy(camP);camInit=true;} else camera.position.lerp(camP,.1);
+  if(!camInit||reduce){camera.position.copy(camP);camInit=true;} else camera.position.lerp(camP,ease(6.3,dt));
   camL.set(0,followY-.05,-.8).lerp(tmp2.set(0,HEAD-.05,0),ss(.34,.56,p));
   // Dive: the camera comes down in front of Jesus to the level of the river, looking up at him and the dove.
   // Then (sink, driven by the homepage) it dips into the water while a waterline rises over the screen into the
