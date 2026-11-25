@@ -163,9 +163,9 @@ const ld=document.getElementById('load');ld.style.opacity=0;setTimeout(()=>ld.re
 const EMBED=document.documentElement.classList.contains("embed");
 let target=0,p=0,qT=0,q=0;
 // Embedded: the homepage sends overall progress q (0..1): cloud screen -> dove scene -> dive underwater
-let pT=0,diveT=0;
+let pT=0,diveT=0,qIn=0;
 let onScreen=true;
-addEventListener("message",e=>{if(e.origin===location.origin&&e.data&&typeof e.data.p==="number"){pT=e.data.p;diveT=e.data.dive||0;onScreen=e.data.on!==false;}});
+addEventListener("message",e=>{if(e.origin===location.origin&&e.data&&typeof e.data.p==="number"){pT=e.data.p;diveT=e.data.dive||0;qIn=e.data.doveP||0;onScreen=e.data.on!==false;}});
 const mist=document.getElementById("mist"),deep=document.getElementById("deep");
 const onScroll=()=>{if(EMBED)return;const m=document.documentElement.scrollHeight-innerHeight;target=m>0?Math.min(1,scrollY/m):0;document.getElementById('hint').style.opacity=target>.02?0:1;};
 addEventListener('scroll',onScroll,{passive:true});onScroll();
@@ -197,7 +197,9 @@ renderer.setAnimationLoop(()=>{
   water.material.uniforms.time.value=reduce?0:t*.3; skyMat.uniforms.t.value=t;
 
   const fly=ss(.01,.45,p), land=ss(.41,.52,p), open=ss(0,.2,p)*.6+ss(.62,1,p)*.4;
-  mist.style.opacity=1-ss(0,.08,p);      // the full fog (continuing the statue scene cloud) thins as the dove breaks out
+  mist.style.opacity=1-ss(0,.08,p);
+  // Statue -> clouds: as the layer fades in, the cloud bank rushes toward the camera and closes around it
+  if(EMBED){const k=ss(0,.07,qIn);mist.style.transform=`scale(${L(1.8,1,k)}) translateY(${L(18,0,k)}%)`;}      // the full fog (continuing the statue scene cloud) thins as the dove breaks out
 
   // Cloud: glowing from within, then it slowly parts once the dove has left it
   const part=ss(.04,.3,p);
@@ -209,11 +211,12 @@ renderer.setAnimationLoop(()=>{
   path.getPointAt(fly,P); path.getTangentAt(Math.min(fly,.995),T);
   const flare=ss(.34,.43,p)*(1-land*.6);                       // brake: body swings upright, wings sweep forward, tail fans
   // Mostly gliding; short bursts of flapping as it rolls out of each turn, strong beats in the flare, soft beats in the hover
-  const flapping=1;                                            // always beating: gentle in the descent, strong in the flare, soft in the hover
-  const beat=L(L(4.2,6.5,flare),3.2,land);
+  // Real doves: bursts of quick beats with short glides on the way down; hard beats in the flare; fast shallow beats to hover
+  const flapping=Math.max(flare,land,1-ss(.6,.9,Math.sin(t*.7)*.5+.5));
+  const beat=L(L(5.4,7.2,flare),6.4,land);
   wingPh+=dt*beat;                                             // integrate, so a change of speed never jumps the wings
   const phase=wingPh+.45*Math.sin(wingPh);                     // quick downstroke, slower recovery
-  const amp=L(L(.55,1.15,flare),.55,land);
+  const amp=L(L(.6,1.15,flare),.72,land)*L(.18,1,flapping);   // glides: wings held out, barely moving
   const down=.5-.5*Math.cos(phase), rising=Math.max(0,-Math.sin(phase));
   const glideW=1-flapping;                                     // wings held out level, slightly swept, in the glide
   // Orientation follows the flight path: heading = direction of travel, nose down by the glide angle,
@@ -223,19 +226,24 @@ renderer.setAnimationLoop(()=>{
   bankS+=(THREE.MathUtils.clamp(-turn*55,-.75,.75)-bankS)*.12;
   const pitchGlide=2.45+down*.06*amp;                           // classic descending dove: body vertical, head toward the ground (1.05 = level)
   const pitch=L(L(pitchGlide,.18,flare),.42,land);
-  const yawNow=0;                                               // faces the viewer all the way down
-  dove.position.copy(P); dove.position.y+=(.5-down)*.05*amp+land*Math.sin(t*1.5)*.02;
-  dove.rotation.set(pitch, yawNow, Math.sin(t*.8)*.05*(1-land)+Math.sin(t*.9)*.03*land);
+  const air=1-land;                                             // turbulence while flying, gentle station-keeping in the hover
+  const yawNow=Math.sin(t*.6)*.22*air+Math.sin(t*.45+1)*.1*land;   // faces the viewer, heading drifts as it steers
+  dove.position.copy(P);
+  dove.position.x+=Math.sin(t*1.3)*.06*air+Math.sin(t*2.2)*.012*land;  // sideslip in the gusts
+  dove.position.z+=Math.sin(t*1.1+2)*.04*air;
+  dove.position.y+=(.5-down)*.07*amp+land*Math.sin(t*1.5)*.025;       // body lifts on each downstroke
+  dove.rotation.set(pitch+Math.sin(t*1.9)*.05*air, yawNow, Math.sin(t*1.3)*.14*air+Math.sin(t*.9)*.04*land);  // rolls with the gusts
   // Wings: glide = out level with a slight sweep-back; flap = full stroke, tips trail and fold back on the upstroke;
   // flare = wings sweep forward and beat hard to shed speed
   const strokeA=.3+down*amp*1.1;                                  // wings spread wide, beating steadily
-  const tipZ=(down*.55-rising*.35)*amp+glideW*.06;
+  const tipZ=(down*.55-rising*.35)*amp+glideW*.06+Math.sin(t*23)*.025;  // primaries flutter in the airflow
   const sweep=rising*.5*amp+glideW*.05-flare*.35;
-  poseE(db,'Bone_025',0,0,-strokeA); poseE(db,'Bone_023',0,sweep,-tipZ);
-  poseE(db,'Bone_020',0,0, strokeA); poseE(db,'Bone_018',0,-sweep,tipZ);
-  pose(db,'Bone_011',1,0,0,(down-.5)*.1*amp-glideW*.06+flare*.35);  // tail trims in the glide, fans down as an air brake
+  const trim=Math.sin(t*1.3)*.06*air;                             // one wing a touch higher to correct each roll
+  poseE(db,'Bone_025',0,0,-strokeA-trim); poseE(db,'Bone_023',0,sweep,-tipZ);
+  poseE(db,'Bone_020',0,0, strokeA-trim); poseE(db,'Bone_018',0,-sweep,tipZ);
+  poseE(db,'Bone_011',(down-.5)*.1*amp-glideW*.06+flare*.35,Math.sin(t*1.6)*.14*air+Math.sin(t*.7)*.05,0);  // tail steers side to side  // tail trims in the glide, fans down as an air brake
   // Head: held level and looking ahead while the body pitches (the model's neck rests upright)
-  const lift=Math.min(pitch-.42,.7); pose(db,'Bone_015',1,0,0,-lift*.4); pose(db,'Bone_013',1,0,0,-lift*.25);
+  const lift=Math.min(pitch-.42,.7); poseE(db,'Bone_015',-lift*.4-(down-.5)*.06*amp,Math.sin(t*.9)*.3*(.4+.6*land)+Math.sin(t*2.6)*.06,Math.sin(t*1.1)*.08);  // head stays steady against the wingbeats, looks about pose(db,'Bone_013',1,0,0,-lift*.25);
   doveGlow.position.copy(P); doveGlow.material.opacity=land*.18;
   doveFill.position.copy(camera.position).sub(P).setLength(.9).add(P); doveFill.position.y-=.3;
 

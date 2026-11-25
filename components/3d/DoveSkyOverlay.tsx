@@ -32,21 +32,21 @@ export default function DoveSkyOverlay() {
       const water = document.querySelector<HTMLElement>(".js-section-underwater");
       if (!el || !scroller || !sky || !water) return;
       const vh = window.innerHeight;
-      const start = sky.offsetTop - 0.9 * vh; // clouds roll in over the end of the statue scene
+      const start = sky.offsetTop - 1.4 * vh; // clouds roll in slowly over the end of the statue scene
       // The engine auto-scrolls into the water and lands ~8.5% into the underwater section; be faded out by then,
       // or the visitor lands on the plain deep-water colour (seen on phones)
       const end = water.offsetTop + 0.08 * water.offsetHeight;
       const q = Math.min(1, Math.max(0, (scroller.scrollTop - start) / (end - start)));
-      const opacity = smooth(0, 0.03, q) * (1 - smooth(0.965, 1, q));
+      const opacity = smooth(0, 0.07, q) * (1 - smooth(0.965, 1, q));
       el.style.opacity = String(opacity);
       el.style.visibility = opacity > 0.001 ? "visible" : "hidden";
       // While the dove scene fully covers the screen, the engine underneath skips drawing (see js-25cd474e.js)
       (window as unknown as { __jyPauseEngine?: boolean }).__jyPauseEngine = opacity >= 0.999;
       // Timing as a share of the real sky section (2500px base on phones, 5000px on desktop), so the dove always
-      // lands before the dive: it leaves the cloud at once, rests above Jesus (p≈0.52) at 78%, short hold, then the dive.
+      // lands before the dive: it leaves the cloud once the cloud layer has faded in, rests above Jesus (p≈0.52) at 65%, then the dive.
       const s = scroller.scrollTop - start;
       const waterAt = water.offsetTop - start;
-      const doveP = Math.min(1, Math.max(0, (0.52 * (s - 0.04 * waterAt)) / (0.74 * waterAt)));
+      const doveP = Math.min(1, Math.max(0, (0.52 * (s - 0.09 * waterAt)) / (0.56 * waterAt)));
       const dive = smooth(waterAt - 0.6 * vh, end - start, s);
       el.contentWindow?.postMessage({ doveP: q, p: doveP, dive, on: opacity > 0.001 }, window.location.origin);
     };
