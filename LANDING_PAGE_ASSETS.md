@@ -1,6 +1,6 @@
 # Landing Page – Everything Currently Used
 
-Engine: prebuilt WebGL bundle `public/build/js-25cd474e.js`, injected by `components/3d/OrganimoEngineLoader.tsx`.
+Engine: prebuilt WebGL bundle `public/build/js-25cd474e.js`, injected by `components/3d/WebGLEngineLoader.tsx`.
 Assets live in `public/webgl/`, `public/images/`, `public/video/`, `public/resources/`.
 Refer to items by number (e.g. "change 9", "remove 31").
 
@@ -20,7 +20,7 @@ Refer to items by number (e.g. "change 9", "remove 31").
 10. `logo.glb` – 3D logo
 11. `pillar.glb`, `pillara2x.glb` – pillars
 12. `arches.glb`, `wall.glb`, `step.glb`, `stonefloor.glb` – stone architecture
-13. `jar.glb`, `jar_organimo_original.glb` – jar
+13. `jar.glb` – jar
 14. `pill.glb`, `product-pill.glb` – pill / capsule
 15. `orb.glb`, `orb-001.glb`, `orb-003.glb`, `orb-004.glb`, `pearl.glb` – glowing orbs, pearl
 

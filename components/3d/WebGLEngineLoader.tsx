@@ -10,7 +10,7 @@ declare global {
   }
 }
 
-export default function OrganimoEngineLoader() {
+export default function WebGLEngineLoader() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       // Ensure window.globalData exists with correct paths
@@ -44,11 +44,11 @@ export default function OrganimoEngineLoader() {
       const script = document.createElement("script");
       script.type = "module";
       script.src = "/build/js-25cd474e.js?v=cgtrader_heroic_v24";
-      script.id = "organimo-webgl-engine";
+      script.id = "webgl-webgl-engine";
       document.body.appendChild(script);
 
       return () => {
-        const existing = document.getElementById("organimo-webgl-engine");
+        const existing = document.getElementById("webgl-webgl-engine");
         if (existing && document.body.contains(existing)) {
           document.body.removeChild(existing);
         }

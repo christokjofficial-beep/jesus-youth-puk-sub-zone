@@ -6,10 +6,6 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: "/wp-content/themes/organimo/public/:path*",
-        destination: "/:path*",
-      },
-      {
         source: "/public/:path*",
         destination: "/:path*",
       },

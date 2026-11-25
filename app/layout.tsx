@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SITE_METADATA } from "@/lib/constants";
-import OrganimoEngineLoader from "@/components/3d/OrganimoEngineLoader";
+import WebGLEngineLoader from "@/components/3d/WebGLEngineLoader";
 import DoveSkyOverlay from "@/components/3d/DoveSkyOverlay";
 import HeroHeader from "@/components/ui/HeroHeader";
 
@@ -45,16 +45,16 @@ export default function RootLayout({
         <meta httpEquiv="X-UA-Compatible" content="IE=edge,chrome=1" />
         <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=1" />
         
-        {/* Preload fonts for Organimo WebGL UI */}
+        {/* Preload fonts for WebGL UI */}
         <link rel="preload" crossOrigin="anonymous" href="/fonts/Fracktif-SemiBold.woff2" as="font" type="font/woff2" />
         <link rel="preload" crossOrigin="anonymous" href="/fonts/Manrope-Medium.woff2" as="font" type="font/woff2" />
         <link rel="preload" crossOrigin="anonymous" href="/fonts/Manrope-Regular.woff2" as="font" type="font/woff2" />
         <link rel="preload" crossOrigin="anonymous" href="/fonts/Mauren-Light.woff2" as="font" type="font/woff2" />
         <link rel="preload" crossOrigin="anonymous" href="/fonts/Mauren-LightItalic.woff2" as="font" type="font/woff2" />
 
-        {/* Global configuration required by Organimo 3D WebGL Engine */}
+        {/* Global configuration required by 3D WebGL engine */}
         <script
-          id="organimo-global-data"
+          id="webgl-global-data"
           dangerouslySetInnerHTML={{
             __html: `
               window.globalData = {
@@ -64,10 +64,10 @@ export default function RootLayout({
             `,
           }}
         />
-        {/* jQuery dependency for Organimo Taxi & fragments */}
+        {/* jQuery dependency for page transitions */}
         <script src="/build/jquery.min.js" />
 
-        {/* Organimo Production Stylesheet for 3D Engine & Typography */}
+        {/* Production stylesheet for 3D Engine & Typography */}
         <link rel="stylesheet" href="/build/style-70bb85ec.css" media="all" />
 
         {/* Google Fonts */}
@@ -149,7 +149,7 @@ export default function RootLayout({
             {/* Loader emblem placeholder */}
             <div className="mt-12 mt-20@sm mt-30@md loader__logo"></div>
 
-            {/* Sprite animation container required by Organimo engine */}
+            {/* Sprite animation container required by WebGL engine */}
             <div>
               <div className="loader__sprite-container">
                 <div className="loader__sprite-container__child js-loader:container">
@@ -165,7 +165,7 @@ export default function RootLayout({
                 </div>
               </div>
 
-              {/* Progress Bar required by Organimo engine */}
+              {/* Progress Bar required by WebGL engine */}
               <div className="loader__progress d-flex justify-center relative mt-40 | js-loader:progress">
                 <div className="loader__progress__end loader__progress__end--left">
                   <div>
@@ -208,7 +208,7 @@ export default function RootLayout({
         {/* Page Content */}
         {children}
 
-        {/* WebGL 3D Canvas & CSS3D layer for Organimo 3D Engine */}
+        {/* WebGL 3D Canvas & CSS3D layer for 3D engine */}
         <canvas
           id="webgl"
           className="fixed fill z-negative"
@@ -437,7 +437,7 @@ export default function RootLayout({
         </div>
 
         {/* Dynamic client-side WebGL engine injector (runs after React hydration) */}
-        <OrganimoEngineLoader />
+        <WebGLEngineLoader />
         {/* Cloud screen + dove scene + dive, played over the (hidden) sky section */}
         <DoveSkyOverlay />
         <HeroHeader />
