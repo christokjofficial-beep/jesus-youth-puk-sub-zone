@@ -271,7 +271,8 @@ renderer.setAnimationLoop(()=>{
   if(!camInit||reduce){camera.position.copy(camP);camInit=true;} else camera.position.lerp(camP,.1);
   camL.set(0,followY-.05,-.8).lerp(tmp2.set(0,HEAD-.05,0),ss(.34,.56,p));
   // Dive: the camera sinks below the river surface and the water closes over into the deep
-  if(dive>0){camera.position.y=L(camera.position.y,-1.4,dive);camera.position.z=L(camera.position.z,2.6,dive);camL.y=L(camL.y,-.6,dive*dive);}
+  // eased so the camera skims the surface for most of the scroll and the water closes over it near the end
+  if(dive>0){const dv=Math.pow(dive,2.2);camera.position.y=L(camera.position.y,-1.4,dv);camera.position.z=L(camera.position.z,2.6,dive);camL.y=L(camL.y,-.6,dv);}
   // Cover the frame by the time the camera crosses the surface (wide phone FOV otherwise shows Jesus's legs underwater)
   const under=dive>0?1-ss(-.35,.15,camera.position.y):0;
   const deepO=Math.max(ss(.35,.85,dive),under);

@@ -24,11 +24,11 @@ export default function DoveSkyOverlay() {
       const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
       return t * t * (3 - 2 * t);
     };
-    // The dive runs on its own clock: at the end of the sky section the engine locks scrolling and jumps into the
-    // underwater section by itself (~1.2 s), so a scroll-driven dive got squeezed into that jump and looked like a cut.
-    let dive = -1;
+    // The visitor's scroll drives the dive. The engine switches sky -> underwater at 90% of the sky section and
+    // (patched in js-25cd474e.js) jumps instantly to its landing point; that jump happens while this layer fully
+    // covers the screen, and the engine's own 1.2 s scene blend plays underneath before we reveal it.
+    let landedFor = 0;
     let last = performance.now();
-    const DIVE_S = 1.8;
     const tick = () => {
       raf = requestAnimationFrame(tick);
       const now = performance.now();
@@ -40,25 +40,28 @@ export default function DoveSkyOverlay() {
       const water = document.querySelector<HTMLElement>(".js-section-underwater");
       if (!el || !scroller || !sky || !water) return;
       const vh = window.innerHeight;
+      const y = scroller.scrollTop;
       const start = sky.offsetTop - 1.4 * vh; // clouds roll in slowly over the end of the statue scene
-      const end = water.offsetTop + 0.08 * water.offsetHeight; // where the engine's jump lands
-      const q = Math.min(1, Math.max(0, (scroller.scrollTop - start) / (end - start)));
-      // The engine starts its jump once the sky section's bottom reaches the bottom of the screen
-      const diving = scroller.scrollTop > water.offsetTop - 1.05 * vh;
-      if (dive < 0) dive = diving ? 1 : 0; // page opened past the dive: no replay
-      dive = Math.min(1, Math.max(0, dive + (diving ? 1 : -1) * (dt / DIVE_S)));
-      // Reveal the engine's underwater scene only after the camera is fully under (its jump is done by then)
-      const opacity = smooth(0, 0.07, q) * (1 - smooth(0.8, 1, dive));
+      const trigger = sky.offsetTop + 0.9 * (sky.offsetHeight - vh); // engine's sky -> underwater switch
+      const land = water.offsetTop + 0.085 * water.offsetHeight; // where the engine's jump lands
+      const diveFrom = trigger - 1.6 * vh;
+      const q = Math.min(1, Math.max(0, (y - start) / (land - start)));
+      // camera sinks as you scroll the last stretch of the Jesus scene; fully under when the engine switches
+      const dive = y >= trigger ? 1 : smooth(diveFrom, trigger - 0.05 * vh, y);
+      landedFor = y >= land - 2 ? landedFor + dt : 0;
+      // after landing: scrolling reveals the underwater scene, but never before the engine's blend has finished
+      const reveal = Math.min(smooth(land, land + 0.5 * vh, y + 0.15 * vh), smooth(0.9, 1.3, landedFor));
+      const opacity = smooth(0, 0.07, q) * (1 - reveal);
       el.style.opacity = String(opacity);
       el.style.visibility = opacity > 0.001 ? "visible" : "hidden";
       // While the dove scene fully covers the screen, the engine underneath skips drawing (see js-25cd474e.js)
       (window as unknown as { __jyPauseEngine?: boolean }).__jyPauseEngine = opacity >= 0.999;
-      // Timing as a share of the real sky section (2500px base on phones, 5000px on desktop), so the dove always
-      // lands before the dive: it leaves the cloud once the cloud layer has faded in, rests above Jesus (p≈0.52) at 65%, then the dive.
-      const s = scroller.scrollTop - start;
-      const waterAt = water.offsetTop - start;
-      const doveP = Math.min(1, Math.max(0, (0.52 * (s - 0.09 * waterAt)) / (0.56 * waterAt)));
-      el.contentWindow?.postMessage({ doveP: q, p: doveP, dive: smooth(0, 1, dive), on: opacity > 0.001 }, window.location.origin);
+      // Dove timing as a share of the scroll before the dive (sky section is 2500px base on phones, 5000px on
+      // desktop): it leaves the cloud once the cloud layer has faded in and rests above Jesus (p≈0.52) at ~85%.
+      const s = y - start;
+      const span = diveFrom - start;
+      const doveP = Math.min(1, Math.max(0, (0.52 * (s - 0.09 * span)) / (0.76 * span)));
+      el.contentWindow?.postMessage({ doveP: q, p: doveP, dive, on: opacity > 0.001 }, window.location.origin);
     };
     tick();
     return () => {
