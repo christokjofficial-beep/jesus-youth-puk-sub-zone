@@ -24,8 +24,16 @@ export default function DoveSkyOverlay() {
       const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
       return t * t * (3 - 2 * t);
     };
+    // The dive runs on its own clock: at the end of the sky section the engine locks scrolling and jumps into the
+    // underwater section by itself (~1.2 s), so a scroll-driven dive got squeezed into that jump and looked like a cut.
+    let dive = -1;
+    let last = performance.now();
+    const DIVE_S = 1.8;
     const tick = () => {
       raf = requestAnimationFrame(tick);
+      const now = performance.now();
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
       const el = frame.current;
       const scroller = document.querySelector<HTMLElement>(".scroll-container");
       const sky = document.querySelector<HTMLElement>(".js-section-sky");
@@ -33,11 +41,14 @@ export default function DoveSkyOverlay() {
       if (!el || !scroller || !sky || !water) return;
       const vh = window.innerHeight;
       const start = sky.offsetTop - 1.4 * vh; // clouds roll in slowly over the end of the statue scene
-      // The engine auto-scrolls into the water and lands ~8.5% into the underwater section; be faded out by then,
-      // or the visitor lands on the plain deep-water colour (seen on phones)
-      const end = water.offsetTop + 0.08 * water.offsetHeight;
+      const end = water.offsetTop + 0.08 * water.offsetHeight; // where the engine's jump lands
       const q = Math.min(1, Math.max(0, (scroller.scrollTop - start) / (end - start)));
-      const opacity = smooth(0, 0.07, q) * (1 - smooth(0.965, 1, q));
+      // The engine starts its jump once the sky section's bottom reaches the bottom of the screen
+      const diving = scroller.scrollTop > water.offsetTop - 1.05 * vh;
+      if (dive < 0) dive = diving ? 1 : 0; // page opened past the dive: no replay
+      dive = Math.min(1, Math.max(0, dive + (diving ? 1 : -1) * (dt / DIVE_S)));
+      // Reveal the engine's underwater scene only after the camera is fully under (its jump is done by then)
+      const opacity = smooth(0, 0.07, q) * (1 - smooth(0.8, 1, dive));
       el.style.opacity = String(opacity);
       el.style.visibility = opacity > 0.001 ? "visible" : "hidden";
       // While the dove scene fully covers the screen, the engine underneath skips drawing (see js-25cd474e.js)
@@ -47,8 +58,7 @@ export default function DoveSkyOverlay() {
       const s = scroller.scrollTop - start;
       const waterAt = water.offsetTop - start;
       const doveP = Math.min(1, Math.max(0, (0.52 * (s - 0.09 * waterAt)) / (0.56 * waterAt)));
-      const dive = smooth(waterAt - 0.6 * vh, end - start, s);
-      el.contentWindow?.postMessage({ doveP: q, p: doveP, dive, on: opacity > 0.001 }, window.location.origin);
+      el.contentWindow?.postMessage({ doveP: q, p: doveP, dive: smooth(0, 1, dive), on: opacity > 0.001 }, window.location.origin);
     };
     tick();
     return () => {
