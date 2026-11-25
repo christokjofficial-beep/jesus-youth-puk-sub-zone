@@ -189,11 +189,11 @@ renderer.setAnimationLoop(()=>{
   else p+=(target-p)*(reduce?1:.06);
   water.material.uniforms.time.value=reduce?0:t*.3; skyMat.uniforms.t.value=t;
 
-  const fly=ss(.03,.45,p), land=ss(.41,.52,p), open=ss(0,.2,p)*.6+ss(.62,1,p)*.4;
-  mist.style.opacity=1-ss(.03,.17,p);      // the full fog (continuing the statue scene cloud) thins as the dove breaks out
+  const fly=ss(.01,.45,p), land=ss(.41,.52,p), open=ss(0,.2,p)*.6+ss(.62,1,p)*.4;
+  mist.style.opacity=1-ss(0,.08,p);      // the full fog (continuing the statue scene cloud) thins as the dove breaks out
 
   // Cloud: glowing from within, then it slowly parts once the dove has left it
-  const part=ss(.1,.4,p);
+  const part=ss(.04,.3,p);
   puffs.forEach(c=>{const u=c.userData;c.position.copy(u.home).addScaledVector(u.out,part).add(tmp.set(Math.sin(t*.08+u.ph)*.3,Math.sin(t*.11+u.ph)*.15,0));
     c.material.color.setRGB(1,L(1,.95,u.warm*open),L(1,.86,u.warm*open)); c.material.opacity=(.95-part*.3)*THREE.MathUtils.smoothstep(c.position.distanceTo(camera.position),3,7);});
   cloudGlow.material.opacity=.25+open*.35;

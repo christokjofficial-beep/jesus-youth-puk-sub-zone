@@ -40,12 +40,11 @@ export default function DoveSkyOverlay() {
       el.style.visibility = opacity > 0.001 ? "visible" : "hidden";
       // While the dove scene fully covers the screen, the engine underneath skips drawing (see js-25cd474e.js)
       (window as unknown as { __jyPauseEngine?: boolean }).__jyPauseEngine = opacity >= 0.999;
-      // Scene timing in pixels: the descent keeps its length; once the dove rests above Jesus there is only a
-      // short hold, then the dive starts as the engine reaches the water.
+      // Timing as a share of the real sky section (2500px base on phones, 5000px on desktop), so the dove always
+      // lands before the dive: it leaves the cloud at once, rests above Jesus (p≈0.52) at 78%, short hold, then the dive.
       const s = scroller.scrollTop - start;
-      // dove rests above Jesus at p≈0.52 → ~11 vh into the scene; the sky section (shortened in globals.css) ends ~2 vh later
-      const doveP = Math.min(1, Math.max(0, (s - 1.6 * vh) / (18 * vh)));
       const waterAt = water.offsetTop - start;
+      const doveP = Math.min(1, Math.max(0, (0.52 * (s - 0.04 * waterAt)) / (0.74 * waterAt)));
       const dive = smooth(waterAt - 0.6 * vh, end - start, s);
       el.contentWindow?.postMessage({ doveP: q, p: doveP, dive, on: opacity > 0.001 }, window.location.origin);
     };
