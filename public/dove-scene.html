@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Descent of the Dove</title>
+<style>
+html,body{margin:0;background:#9cc3e6}
+body{height:600vh}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:#eaf2f8;color:#4f6577;font:500 12px/1 system-ui,sans-serif;letter-spacing:.25em;transition:opacity 1.2s;z-index:2}
+#hint{position:fixed;left:50%;bottom:28px;translate:-50% 0;width:22px;height:36px;border:1.5px solid rgba(255,255,255,.9);border-radius:12px;transition:opacity .6s;filter:drop-shadow(0 1px 3px rgba(0,0,0,.3))}
+#hint::after{content:"";position:absolute;left:50%;top:7px;width:3px;height:7px;margin-left:-1.5px;border-radius:2px;background:#fff;animation:wheel 1.8s infinite}
+@keyframes wheel{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
+@media (prefers-reduced-motion:reduce){#hint::after{animation:none}}
+#mist,#deep{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:1}
+#mist{background:url(/webgl/textures/cloud-01.png) 18% 30%/70% auto no-repeat,url(/webgl/textures/cloud-01.png) 85% 70%/80% auto no-repeat,radial-gradient(circle at 50% 45%,#fff 0,#f6eef6 55%,#e6d6ea 100%)}
+#deep{background:radial-gradient(ellipse at 50% -10%,rgba(190,170,255,.55) 0,rgba(0,0,0,0) 55%),linear-gradient(#3f7fa0 0%,#4b4f9a 45%,#5a3a8f 100%)}
+html.embed,html.embed body{height:100%;overflow:hidden;background:transparent}
+html.embed #hint{display:none}
+html.embed #load{background:#fff;color:transparent}
+</style>
+</head>
+<body>
+<div id="load">0%</div>
+<canvas id="c" aria-label="Scroll to follow the dove across the river as it comes to rest above Jesus."></canvas>
+<div id="hint" aria-hidden="true"></div>
+<div id="mist" aria-hidden="true"></div>
+<div id="deep" aria-hidden="true"></div>
+
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.170.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.170.0/examples/jsm/"}}</script>
+<script>if(new URLSearchParams(location.search).has("embed"))document.documentElement.classList.add("embed");</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
+import {Water} from 'three/addons/objects/Water.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));   // CPU/GPU budget: 1.5x is visually the same, ~45% fewer pixels than 2x
+renderer.toneMapping=THREE.NeutralToneMapping; renderer.toneMappingExposure=1;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(36,1,.05,3000);
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+// bloom removed: at this strength it was invisible but the most expensive pass
+const bloom={strength:0}; composer.addPass(new OutputPass());
+
+// ---- Stylised sky matching the statue scene: indigo night above, violet, then a soft pink glow at the horizon ----
+const MOON=new THREE.Vector3(-.35,.75,-.55).normalize();
+const SUN=MOON;   // the water shader calls its highlight direction "sun"
+const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,uniforms:{t:{value:0}},
+  vertexShader:`varying vec3 v;void main(){v=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec3 v;uniform float t;
+  float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+  void main(){float h=v.y;
+    vec3 zen=vec3(.035,.04,.12), mid=vec3(.2,.16,.38), hor=vec3(.86,.6,.75), low=vec3(.55,.42,.62);
+    vec3 c=h<0.?mix(hor,low,smoothstep(0.,-.3,h)):mix(hor,mix(mid,zen,smoothstep(.22,.75,h)),smoothstep(0.,.22,h));
+    vec2 g=floor(vec2(atan(v.z,v.x)*260.,v.y*260.));float st=h21(g);
+    gl_FragColor=vec4(c,1.);}`});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(900,64,32),skyMat));
+scene.fog=new THREE.Fog(0xb88fb4,40,260);
+
+const moon=new THREE.DirectionalLight(0xdfe0ff,1.5); moon.position.copy(MOON).multiplyScalar(50); scene.add(moon,moon.target);
+const key=new THREE.DirectionalLight(0xfff1e6,1.3); key.position.set(2.5,3,6); scene.add(key);   // keeps Jesus bright and readable
+const rim=new THREE.DirectionalLight(0xf3a6d0,1.1); rim.position.set(0,3,-6); scene.add(rim);     // pink rim from the horizon glow
+scene.add(new THREE.HemisphereLight(0xb9a7e6,0x3a2a55,.55));
+
+// River surface with live reflections of the sky, shore and Jesus
+const waterNormals=new THREE.TextureLoader().load('/webgl/textures/waternormals.jpg',t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;});
+const water=new Water(new THREE.CircleGeometry(1500,48),{textureWidth:512,textureHeight:512,waterNormals,sunDirection:SUN.clone(),sunColor:0xffd3ea,waterColor:0x2a2150,distortionScale:.9,alpha:1,fog:true});
+water.rotation.x=-Math.PI/2; water.material.uniforms.size.value=6; scene.add(water);
+
+
+// ---- Heaven's light (appears as the dove arrives) ----
+const softTex=(stops)=>{const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');const g=x.createRadialGradient(128,128,0,128,128,128);stops.forEach(([o,s])=>g.addColorStop(o,s));x.fillStyle=g;x.fillRect(0,0,256,256);return new THREE.CanvasTexture(c);};
+const glowTex=softTex([[0,'rgba(255,255,255,1)'],[.3,'rgba(255,255,255,.4)'],[1,'rgba(255,255,255,0)']]);
+const beamMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,uniforms:{o:{value:0},t:{value:0}},
+  vertexShader:`varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec2 u;uniform float o,t;
+  void main(){float edge=pow(sin(u.x*3.14159),5.);float fall=smoothstep(0.,.3,u.y)*smoothstep(1.,.5,u.y);
+    float streak=.7+.3*sin(u.x*36.+t*.5)*sin(u.x*13.-t*.3);
+    gl_FragColor=vec4(vec3(1.,.96,.86),edge*fall*streak*o*.28);}`});
+const beam=new THREE.Mesh(new THREE.PlaneGeometry(2.2,24),beamMat); beam.position.y=11.5; scene.add(beam);
+const N=420,mp=new Float32Array(N*3),seed=new Float32Array(N);
+for(let i=0;i<N;i++){const r=Math.sqrt(Math.random())*.7,a=Math.random()*6.28;mp[i*3]=Math.cos(a)*r;mp[i*3+1]=Math.random()*4;mp[i*3+2]=Math.sin(a)*r;seed[i]=Math.random()*6.28;}
+const mg=new THREE.BufferGeometry();mg.setAttribute('position',new THREE.BufferAttribute(mp,3));
+const motes=new THREE.Points(mg,new THREE.PointsMaterial({color:0xfff4d8,size:.03,map:glowTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+scene.add(motes);
+const ringTex=softTex([[0,'rgba(255,255,255,0)'],[.74,'rgba(255,255,255,0)'],[.86,'rgba(255,255,255,.5)'],[1,'rgba(255,255,255,0)']]);
+const rings=[0,1,2].map(()=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:ringTex,transparent:true,depthWrite:false,opacity:0}));m.rotation.x=-Math.PI/2;m.position.y=.02;scene.add(m);return m;});
+
+// ---- Load everything ----
+const files={jesus:3,dove:4};const prog={};
+const tick=(k,e)=>{if(e.total){prog[k]=e.loaded/e.total;const w=Object.values(files).reduce((a,b)=>a+b);document.getElementById('load').textContent=Math.round(Object.keys(files).reduce((a,k)=>a+(prog[k]||0)*files[k],0)/w*100)+'%';}};
+const big=Math.min(renderer.capabilities.maxTextureSize,8192)>=8192&&innerWidth>900;
+const loadTex=(url,k)=>new Promise((r,j)=>new THREE.TextureLoader().load(url,r,e=>tick(k,e),j));
+const loadHDR=(url,k)=>new Promise((r,j)=>new RGBELoader().load(url,r,e=>tick(k,e),j));
+const gltf=new GLTFLoader();const loadGLB=(url,k)=>new Promise((r,j)=>gltf.load(url,g=>r(g.scene),e=>tick(k,e),j));
+let J,D;
+try{[J,D]=await Promise.all([
+  loadGLB('/webgl/models/baptism/jesus-rigged.glb','jesus'),
+  loadGLB('/webgl/models/baptism/white-dove-rig.glb','dove')]);}
+catch(e){document.getElementById('load').textContent='Could not load the scene: '+(e.message||e);throw e;}
+// Reflections from the site's own sky cube map (the one the original sky scene used)
+const env=new THREE.CubeTextureLoader().setPath('/webgl/textures/envMap/').load(['px.png','nx.png','py.png','ny.png','pz.png','nz.png']);
+env.colorSpace=THREE.SRGBColorSpace; scene.environment=env; scene.environmentIntensity=.55;
+// Low sea of lavender-pink clouds around the horizon, like the statue scene
+const cloudSeaTex=new THREE.TextureLoader().load('/webgl/textures/cloud-01.png'); cloudSeaTex.colorSpace=THREE.SRGBColorSpace;
+for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,r=45+Math.random()*120;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudSeaTex,color:new THREE.Color().setHSL(.88+Math.random()*.06,.45,.72+Math.random()*.12),transparent:true,opacity:.5+Math.random()*.3,depthWrite:false,fog:false}));
+  sp.position.set(Math.cos(a)*r,1+Math.random()*9,Math.sin(a)*r-20); const w=30+Math.random()*40; sp.scale.set(w,w*.4,1); scene.add(sp);}
+
+function fit(obj,h){const b=new THREE.Box3().setFromObject(obj),sz=b.getSize(new THREE.Vector3());obj.scale.setScalar(h/sz.y);const b2=new THREE.Box3().setFromObject(obj),c=b2.getCenter(new THREE.Vector3());obj.position.set(-c.x,-b2.min.y,-c.z);const g=new THREE.Group();g.add(obj);return g;}
+const bones=r=>{const m={root:r};r.traverse(o=>{if(o.isBone){o.userData.rest=o.quaternion.clone();m[o.name]=o;}});return m;};
+const qa=new THREE.Quaternion(),qp=new THREE.Quaternion(),qr=new THREE.Quaternion(),ax=new THREE.Vector3();
+// Rotate a bone from rest about an axis in model space (+X = left, +Y = up, +Z = facing)
+function pose(m,n,x,y,z,a){const b=m[n];if(!b)return;b.parent.updateWorldMatrix(true,false);m.root.getWorldQuaternion(qr);qp.copy(qr).invert().multiply(b.parent.getWorldQuaternion(qa));qa.setFromAxisAngle(ax.set(x,y,z),a);b.quaternion.copy(qp).invert().multiply(qa).multiply(qp).multiply(b.userData.rest);}
+// Same, with a combined rotation (model-space Euler) for wings that beat and fold at once
+const eu=new THREE.Euler();
+function poseE(m,n,rx,ry,rz){const b=m[n];if(!b)return;b.parent.updateWorldMatrix(true,false);m.root.getWorldQuaternion(qr);qp.copy(qr).invert().multiply(b.parent.getWorldQuaternion(qa));qa.setFromEuler(eu.set(rx,ry,rz,'YZX'));b.quaternion.copy(qp).invert().multiply(qa).multiply(qp).multiply(b.userData.rest);}
+
+// ---- The cloud the dove descends from (site cloud texture) ----
+const CLOUD=new THREE.Vector3(0,16.2,-2.2);   // directly above Jesus
+const cloudTex=new THREE.TextureLoader().load('/webgl/textures/cloud-01.png'); cloudTex.colorSpace=THREE.SRGBColorSpace;
+const puffs=[...Array(26)].map((_,i)=>{
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudTex,color:0xffffff,transparent:true,opacity:.92,depthWrite:false}));
+  const a=Math.random()*Math.PI*2, r=Math.pow(Math.random(),.8)*3.4;
+  const home=new THREE.Vector3(CLOUD.x+Math.cos(a)*r*1.5,CLOUD.y+(Math.random()-.3)*1.4+(1-r/3.4)*.8,CLOUD.z+Math.sin(a)*r*.6);
+  const w=2.6+Math.random()*3.2; s.scale.set(w,w*.62,1); s.position.copy(home);
+  s.userData={home,out:new THREE.Vector3(Math.cos(a)*1.6,.2,-Math.abs(Math.sin(a))).multiplyScalar(2+Math.random()*2),ph:Math.random()*6.28,warm:Math.random()};
+  scene.add(s); return s;});
+// Light breaking through the cloud behind the dove
+const cloudGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xfff1cc,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.0}));
+cloudGlow.position.copy(CLOUD).add({x:0,y:.3,z:-1.5}); cloudGlow.scale.setScalar(9); scene.add(cloudGlow);
+
+const jesus=fit(J,1.8), jb=bones(J); jesus.position.set(0,-.62,0); scene.add(jesus);
+const dove=fit(D,.3), db=bones(D); dove.rotation.order='YXZ'; scene.add(dove);
+// Pure white dove: the generated colour texture has brown stains on the wings, so drop it and keep only the
+// feather relief (normal map); cut the blue sky reflection and add a faint warm self-light so it reads as white.
+dove.traverse(c=>{if(c.isMesh){const m=c.material;m.map=null;m.color.set(0xfffdf8);m.metalness=0;m.roughness=.9;m.envMapIntensity=0;   // no blue sky tint on the feathers
+  if(m.normalScale)m.normalScale.set(.45,.45);   // softer feather relief, no grey streaks
+  m.emissive=new THREE.Color(0xfffaf2);m.emissiveIntensity=.2;m.needsUpdate=true;}});
+const doveGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xfff8ea,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+doveGlow.scale.setScalar(.8); scene.add(doveGlow);
+// Soft fill that keeps the dove white when seen from below against the bright sky
+const doveFill=new THREE.PointLight(0xffffff,2.2,2.5,1.5); scene.add(doveFill);
+const ld=document.getElementById('load');ld.style.opacity=0;setTimeout(()=>ld.remove(),1200);
+
+// ---- Scroll is the only input ----
+const EMBED=document.documentElement.classList.contains("embed");
+let target=0,p=0,qT=0,q=0;
+// Embedded: the homepage sends overall progress q (0..1): cloud screen -> dove scene -> dive underwater
+let pT=0,diveT=0;
+let onScreen=true;
+addEventListener("message",e=>{if(e.origin===location.origin&&e.data&&typeof e.data.p==="number"){pT=e.data.p;diveT=e.data.dive||0;onScreen=e.data.on!==false;}});
+const mist=document.getElementById("mist"),deep=document.getElementById("deep");
+const onScroll=()=>{if(EMBED)return;const m=document.documentElement.scrollHeight-innerHeight;target=m>0?Math.min(1,scrollY/m):0;document.getElementById('hint').style.opacity=target>.02?0:1;};
+addEventListener('scroll',onScroll,{passive:true});onScroll();
+function resize(){renderer.setSize(innerWidth,innerHeight,false);composer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.fov=camera.aspect<.8?54:36;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+
+const ss=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+const L=(a,b,t)=>a+(b-a)*t;
+const HEAD=jesus.position.y+1.8;
+// Flight: a real descent. Birds lose height by gliding forward and down in gentle S-turns (never a vertical drop),
+// then flare to brake. The path leaves the fog high behind Jesus and zig-zags down toward him and the camera.
+const path=new THREE.CatmullRomCurve3([
+  new THREE.Vector3(0,CLOUD.y,-1.2),new THREE.Vector3(.12,12.6,-1.0),new THREE.Vector3(-.1,9.2,-.8),
+  new THREE.Vector3(.08,6.2,-.5),new THREE.Vector3(0,3.8,-.15),new THREE.Vector3(0,HEAD+.12,.05)],false,'centripetal');
+const P=new THREE.Vector3(),T=new THREE.Vector3(),camP=new THREE.Vector3(),camL=new THREE.Vector3(),tmp=new THREE.Vector3(),tmp2=new THREE.Vector3();
+const wideP=new THREE.Vector3(-1.4,1.3,8.2), closeP=new THREE.Vector3(0,1.0,3.9);
+let yawPrev=0,bankS=0,wingPh=0,lastT=0;
+let camInit=false,followY=16;
+
+const clock=new THREE.Clock();
+renderer.setAnimationLoop(()=>{
+  if(EMBED&&!onScreen){clock.getDelta();return;}   // hidden on the homepage: skip all work
+  const t=clock.getElapsedTime(),dt=Math.min(.05,t-lastT);lastT=t;
+  if(window.__p!==undefined&&window.__p!==window.__lp){p=target=window.__lp=window.__p;camInit=false;} // screenshot hook
+  let dive=0;
+  if(EMBED){q+=(pT-q)*(reduce?1:.08);target=q;p=q;dive=diveT;
+}
+  else p+=(target-p)*(reduce?1:.06);
+  water.material.uniforms.time.value=reduce?0:t*.3; skyMat.uniforms.t.value=t;
+
+  const fly=ss(.03,.45,p), land=ss(.41,.52,p), open=ss(0,.2,p)*.6+ss(.62,1,p)*.4;
+  mist.style.opacity=1-ss(.03,.17,p);      // the full fog (continuing the statue scene cloud) thins as the dove breaks out
+
+  // Cloud: glowing from within, then it slowly parts once the dove has left it
+  const part=ss(.1,.4,p);
+  puffs.forEach(c=>{const u=c.userData;c.position.copy(u.home).addScaledVector(u.out,part).add(tmp.set(Math.sin(t*.08+u.ph)*.3,Math.sin(t*.11+u.ph)*.15,0));
+    c.material.color.setRGB(1,L(1,.95,u.warm*open),L(1,.86,u.warm*open)); c.material.opacity=(.95-part*.3)*THREE.MathUtils.smoothstep(c.position.distanceTo(camera.position),3,7);});
+  cloudGlow.material.opacity=.25+open*.35;
+
+  // ---- Dove aerodynamics ----
+  path.getPointAt(fly,P); path.getTangentAt(Math.min(fly,.995),T);
+  const flare=ss(.34,.43,p)*(1-land*.6);                       // brake: body swings upright, wings sweep forward, tail fans
+  // Mostly gliding; short bursts of flapping as it rolls out of each turn, strong beats in the flare, soft beats in the hover
+  const flapping=1;                                            // always beating: gentle in the descent, strong in the flare, soft in the hover
+  const beat=L(L(4.2,6.5,flare),3.2,land);
+  wingPh+=dt*beat;                                             // integrate, so a change of speed never jumps the wings
+  const phase=wingPh+.45*Math.sin(wingPh);                     // quick downstroke, slower recovery
+  const amp=L(L(.55,1.15,flare),.55,land);
+  const down=.5-.5*Math.cos(phase), rising=Math.max(0,-Math.sin(phase));
+  const glideW=1-flapping;                                     // wings held out level, slightly swept, in the glide
+  // Orientation follows the flight path: heading = direction of travel, nose down by the glide angle,
+  // banked into each turn (roll from turn rate), then upright and facing us in the flare and hover
+  const yaw=Math.atan2(T.x,T.z); let turn=yaw-yawPrev; turn=Math.atan2(Math.sin(turn),Math.cos(turn)); yawPrev=yaw;
+  const glideAngle=Math.asin(Math.min(1,Math.max(-1,-T.y)));    // >0 when descending
+  bankS+=(THREE.MathUtils.clamp(-turn*55,-.75,.75)-bankS)*.12;
+  const pitchGlide=2.45+down*.06*amp;                           // classic descending dove: body vertical, head toward the ground (1.05 = level)
+  const pitch=L(L(pitchGlide,.18,flare),.42,land);
+  const yawNow=0;                                               // faces the viewer all the way down
+  dove.position.copy(P); dove.position.y+=(.5-down)*.05*amp+land*Math.sin(t*1.5)*.02;
+  dove.rotation.set(pitch, yawNow, Math.sin(t*.8)*.05*(1-land)+Math.sin(t*.9)*.03*land);
+  // Wings: glide = out level with a slight sweep-back; flap = full stroke, tips trail and fold back on the upstroke;
+  // flare = wings sweep forward and beat hard to shed speed
+  const strokeA=.3+down*amp*1.1;                                  // wings spread wide, beating steadily
+  const tipZ=(down*.55-rising*.35)*amp+glideW*.06;
+  const sweep=rising*.5*amp+glideW*.05-flare*.35;
+  poseE(db,'Bone_025',0,0,-strokeA); poseE(db,'Bone_023',0,sweep,-tipZ);
+  poseE(db,'Bone_020',0,0, strokeA); poseE(db,'Bone_018',0,-sweep,tipZ);
+  pose(db,'Bone_011',1,0,0,(down-.5)*.1*amp-glideW*.06+flare*.35);  // tail trims in the glide, fans down as an air brake
+  // Head: held level and looking ahead while the body pitches (the model's neck rests upright)
+  const lift=Math.min(pitch-.42,.7); pose(db,'Bone_015',1,0,0,-lift*.4); pose(db,'Bone_013',1,0,0,-lift*.25);
+  doveGlow.position.copy(P); doveGlow.material.opacity=land*.18;
+  doveFill.position.copy(camera.position).sub(P).setLength(.9).add(P); doveFill.position.y-=.3;
+
+  // Jesus: gaze rises to the dove, hands open as it arrives
+  const gaze=ss(.28,.5,p);
+  pose(jb,'neck',1,0,0,-gaze*.12); pose(jb,'Head',1,0,0,-gaze*.4);
+  pose(jb,'LeftArm',0,0,1,.15+land*.4); pose(jb,'RightArm',0,0,1,-.15-land*.4);
+  pose(jb,'LeftForeArm',1,0,0,-.25-land*.55); pose(jb,'RightForeArm',1,0,0,-.25-land*.55);
+
+  // Heaven's light
+  beamMat.uniforms.o.value=ss(.38,.7,p); beamMat.uniforms.t.value=t;
+  motes.material.opacity=ss(.38,.7,p)*.45;
+  for(let i=0;i<N;i++){mp[i*3+1]-=reduce?0:.005;mp[i*3]+=Math.sin(t*.5+seed[i])*.0006;if(mp[i*3+1]<0)mp[i*3+1]=4;}mg.attributes.position.needsUpdate=true;
+  rings.forEach((r,i)=>{const k=(t*.2+i/3)%1;r.scale.setScalar(.5+k*2.6);r.material.opacity=(1-k)*(.1+open*.3);});
+  bloom.strength=.1+open*.08;
+
+  // Camera: 1) close on the dove as it breaks out of the cloud  2) follows it down the spiral  3) settles low and reverent on Jesus
+  // opening: just outside the cloud bank, looking into it as the dove bursts out toward us
+  const settle=ss(.26,.54,p);
+  // Calm camera: it no longer chases the dove (that made the whole sky and water jitter); it rises gently
+  // from a low wide view looking up into the sky and tilts down as the dove comes to Jesus
+  const tilt=ss(.03,.54,p);
+  if(!camInit)followY=P.y; else followY+=(P.y-followY)*(reduce?1:.06);                     // heavily smoothed height, so scroll steps never jolt the view
+  camP.set(0,followY-.7,3.6).lerp(closeP,ss(.34,.56,p));
+  if(!camInit||reduce){camera.position.copy(camP);camInit=true;} else camera.position.lerp(camP,.1);
+  camL.set(0,followY-.05,-.8).lerp(tmp2.set(0,HEAD-.05,0),ss(.34,.56,p));
+  // Dive: the camera sinks below the river surface and the water closes over into the deep
+  if(dive>0){camera.position.y=L(camera.position.y,-1.4,dive);camera.position.z=L(camera.position.z,2.6,dive);camL.y=L(camL.y,-.6,dive*dive);}
+  deep.style.opacity=ss(.35,.85,dive);
+  camera.lookAt(camL);
+  beam.lookAt(camera.position.x,beam.position.y,camera.position.z);
+  composer.render();
+});
+</script>
+</body>
+</html>

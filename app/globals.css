@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background-color: #040814;
+}
+
+/* Ensure WebGL canvas and css3d layer fill screen behind content */
+#webgl {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+}
+
+#css3d {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* The pink sky scene is replaced by the dove scene overlay (components/3d/DoveSkyOverlay.tsx); hide its texts */
+.js-sky-landing-ui {
+  visibility: hidden !important;
+}
+
+/* Shorter sky section: after the dove rests above Jesus, a brief hold, then the dive underwater */
+.home-scrolling-area.js-section-sky {
+  height: calc(var(--baseLength) * var(--skyRatio) * 0.44) !important;
+}
+
+/* No logo anywhere: loading-screen logo, sprite and reveal mark */
+.loader__logo {
+  display: none !important;
+}
+/* keep their space so the progress ring stays centred */
+.loader__sprite-container,
+.loader__reveal {
+  visibility: hidden !important;
+}
+.js-loader .loader__progress {
+  position: fixed !important;
+  top: 50%;
+  left: 50%;
+  margin: 0 !important;
+  transform: translate(-50%, -50%);
+}

@@ -1,9 +1,0 @@
-:root {
-  --magnolia: #e7e6f0;
-  --dark: #171820;
-  --gold: #c9ad70;
-  --gold-glow: rgba(217, 168, 78, 0.6);
-  --serif: 'Cormorant Garamond', Georgia, serif;
-  --sans: 'Manrope', system-ui, -apple-system, sans-serif;
-  --transition-smooth: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
