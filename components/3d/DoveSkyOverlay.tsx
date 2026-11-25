@@ -33,8 +33,9 @@ export default function DoveSkyOverlay() {
       if (!el || !scroller || !sky || !water) return;
       const vh = window.innerHeight;
       const start = sky.offsetTop - 0.9 * vh; // clouds roll in over the end of the statue scene
-      // engine finishes its surface-to-underwater move ~11% into the underwater section (half as tall on phones); hold the deep until then
-      const end = water.offsetTop + 0.11 * water.offsetHeight;
+      // The engine auto-scrolls into the water and lands ~8.5% into the underwater section; be faded out by then,
+      // or the visitor lands on the plain deep-water colour (seen on phones)
+      const end = water.offsetTop + 0.08 * water.offsetHeight;
       const q = Math.min(1, Math.max(0, (scroller.scrollTop - start) / (end - start)));
       const opacity = smooth(0, 0.03, q) * (1 - smooth(0.965, 1, q));
       el.style.opacity = String(opacity);
