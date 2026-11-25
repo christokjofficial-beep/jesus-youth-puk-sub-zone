@@ -15,11 +15,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 @media (prefers-reduced-motion:reduce){#hint::after{animation:none}}
 #mist,#deep{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:1}
 #mist{background:url(/webgl/textures/cloud-01.png) 18% 30%/70% auto no-repeat,url(/webgl/textures/cloud-01.png) 85% 70%/80% auto no-repeat,radial-gradient(circle at 50% 45%,#fff 0,#f6eef6 55%,#e6d6ea 100%)}
-/* Deep water: same violet and slanted god-rays as the underwater scene it hands over to, with the dive's bubbles rising */
+/* Deep water: same violet and slanted god-rays as the underwater scene it hands over to,  */
 #deep{overflow:hidden;background:repeating-linear-gradient(115deg,rgba(255,235,255,0) 0 9%,rgba(255,235,255,.09) 11% 14%,rgba(255,235,255,0) 17% 24%),radial-gradient(ellipse at 70% -10%,rgba(214,170,255,.5) 0,rgba(0,0,0,0) 60%),linear-gradient(#5b3c93 0%,#5a3a8f 50%,#4a2f78 100%)}
-#deep i{position:absolute;bottom:-40px;opacity:var(--b,0);border-radius:50%;border:1px solid rgba(255,255,255,.55);background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.7) 0 12%,rgba(255,255,255,.08) 40%,rgba(255,255,255,0) 70%);animation:rise linear infinite}
-@keyframes rise{from{transform:translate(0,0)}50%{transform:translate(8px,-55vh)}to{transform:translate(-6px,-115vh)}}
-@media (prefers-reduced-motion:reduce){#deep i{display:none}}
 html.embed,html.embed body{height:100%;overflow:hidden;background:transparent}
 html.embed #hint{display:none}
 html.embed #load{background:#fff;color:transparent}
@@ -31,9 +28,6 @@ html.embed #load{background:#fff;color:transparent}
 <div id="hint" aria-hidden="true"></div>
 <div id="mist" aria-hidden="true"></div>
 <div id="deep" aria-hidden="true"></div>
-<script>// Bubbles from the dive (CSS-animated, only visible while #deep is)
-for(let i=0,d=document.getElementById("deep");i<26;i++){const b=document.createElement("i"),s=4+Math.random()*16;
-  b.style.cssText=`left:${Math.random()*100}%;width:${s}px;height:${s}px;animation-duration:${2.2+Math.random()*2.8}s;animation-delay:${-Math.random()*4}s`;d.appendChild(b);}</script>
 
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.170.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.170.0/examples/jsm/"}}</script>
 <script>if(new URLSearchParams(location.search).has("embed"))document.documentElement.classList.add("embed");</script>
@@ -277,7 +271,6 @@ renderer.setAnimationLoop(()=>{
   const under=dive>0?1-ss(-.35,.15,camera.position.y):0;
   const deepO=Math.max(ss(.35,.85,dive),under);
   deep.style.opacity=deepO; jesus.visible=deepO<.99;
-  deep.style.setProperty("--b",ss(.8,1,deepO));   // bubbles only once fully under, never over the Jesus scene
   camera.lookAt(camL);
   beam.lookAt(camera.position.x,beam.position.y,camera.position.z);
   composer.render();
