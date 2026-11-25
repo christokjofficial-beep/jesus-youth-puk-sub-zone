@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { STATUE_SWITCH } from "@/components/3d/DoveSkyOverlay";
 
 /**
  * "Jesus Youth" main header above the Christ the Redeemer statue.
- * Fades out before the clouds roll in.
+ * Fades out just before the clouds roll in (see DoveSkyOverlay), so it never sits on top of them.
  */
 export default function HeroHeader() {
   const ref = useRef<HTMLHeadingElement>(null);
@@ -18,11 +19,12 @@ export default function HeroHeader() {
     const tick = () => {
       raf = requestAnimationFrame(tick);
       const scroller = document.querySelector<HTMLElement>(".scroll-container");
-      const sky = document.querySelector<HTMLElement>(".js-section-sky");
-      if (!scroller || !sky || !ref.current) return;
+      const statue = document.querySelector<HTMLElement>(".js-section-space");
+      if (!scroller || !statue || !ref.current) return;
       const vh = window.innerHeight;
-      // fully in place at the top; gone by the time the cloud screen starts
-      const k = 1 - smooth(sky.offsetTop - 2.2 * vh, sky.offsetTop - 1.1 * vh, scroller.scrollTop);
+      // fully in place at the top; gone as the clouds start (they roll in over the last 0.7 screens before the switch)
+      const statueSwitch = statue.offsetTop + STATUE_SWITCH * (statue.offsetHeight - vh);
+      const k = 1 - smooth(statueSwitch - 1.0 * vh, statueSwitch - 0.6 * vh, scroller.scrollTop);
       ref.current.style.opacity = String(k);
       ref.current.style.transform = `translate(-50%, ${(1 - k) * -2}vh)`;
     };
