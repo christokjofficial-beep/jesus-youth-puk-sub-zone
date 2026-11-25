@@ -64,7 +64,8 @@ const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:
     vec3 c=h<0.?mix(hor,low,smoothstep(0.,-.3,h)):mix(hor,mix(mid,zen,smoothstep(.22,.75,h)),smoothstep(0.,.22,h));
     vec2 g=floor(vec2(atan(v.z,v.x)*260.,v.y*260.));float st=h21(g);
     gl_FragColor=vec4(c,1.);}`});
-scene.add(new THREE.Mesh(new THREE.SphereGeometry(900,64,32),skyMat));
+const skyDome=new THREE.Mesh(new THREE.SphereGeometry(900,64,32),skyMat); scene.add(skyDome);
+const above=[skyDome];   // things that only exist above the surface (hidden once the camera is under)
 scene.fog=new THREE.Fog(0xb88fb4,40,260);
 
 const moon=new THREE.DirectionalLight(0xdfe0ff,1.5); moon.position.copy(MOON).multiplyScalar(50); scene.add(moon,moon.target);
@@ -115,7 +116,7 @@ env.colorSpace=THREE.SRGBColorSpace; scene.environment=env; scene.environmentInt
 const cloudSeaTex=new THREE.TextureLoader().load('/webgl/textures/cloud-01.png'); cloudSeaTex.colorSpace=THREE.SRGBColorSpace;
 for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,r=45+Math.random()*120;
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudSeaTex,color:new THREE.Color().setHSL(.88+Math.random()*.06,.45,.72+Math.random()*.12),transparent:true,opacity:.5+Math.random()*.3,depthWrite:false,fog:false}));
-  sp.position.set(Math.cos(a)*r,1+Math.random()*9,Math.sin(a)*r-20); const w=30+Math.random()*40; sp.scale.set(w,w*.4,1); scene.add(sp);}
+  sp.position.set(Math.cos(a)*r,1+Math.random()*9,Math.sin(a)*r-20); const w=30+Math.random()*40; sp.scale.set(w,w*.4,1); scene.add(sp); above.push(sp);}
 
 function fit(obj,h){const b=new THREE.Box3().setFromObject(obj),sz=b.getSize(new THREE.Vector3());obj.scale.setScalar(h/sz.y);const b2=new THREE.Box3().setFromObject(obj),c=b2.getCenter(new THREE.Vector3());obj.position.set(-c.x,-b2.min.y,-c.z);const g=new THREE.Group();g.add(obj);return g;}
 const bones=r=>{const m={root:r};r.traverse(o=>{if(o.isBone){o.userData.rest=o.quaternion.clone();m[o.name]=o;}});return m;};
@@ -135,10 +136,34 @@ const puffs=[...Array(26)].map((_,i)=>{
   const home=new THREE.Vector3(CLOUD.x+Math.cos(a)*r*1.5,CLOUD.y+(Math.random()-.3)*1.4+(1-r/3.4)*.8,CLOUD.z+Math.sin(a)*r*.6);
   const w=2.6+Math.random()*3.2; s.scale.set(w,w*.62,1); s.position.copy(home);
   s.userData={home,out:new THREE.Vector3(Math.cos(a)*1.6,.2,-Math.abs(Math.sin(a))).multiplyScalar(2+Math.random()*2),ph:Math.random()*6.28,warm:Math.random()};
-  scene.add(s); return s;});
+  scene.add(s); above.push(s); return s;});
 // Light breaking through the cloud behind the dove
 const cloudGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xfff1cc,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.0}));
-cloudGlow.position.copy(CLOUD).add({x:0,y:.3,z:-1.5}); cloudGlow.scale.setScalar(9); scene.add(cloudGlow);
+cloudGlow.position.copy(CLOUD).add({x:0,y:.3,z:-1.5}); cloudGlow.scale.setScalar(9); scene.add(cloudGlow); above.push(cloudGlow,beam,motes);
+
+// ---- Under the river: the same world as the site's underwater scene (violet water, sand floor, standing stones,
+// slanted light), so the dive continues straight into it and the crossfade to that scene is seamless ----
+const under=new THREE.Group(); under.visible=false; scene.add(under);
+const skyFog=scene.fog, underFog=new THREE.Fog(0x5e3f8c,1,26);
+// fog-coloured dome instead of scene.background, so the far water gets the same tone mapping as the fogged floor
+under.add(new THREE.Mesh(new THREE.SphereGeometry(300,24,12),new THREE.MeshBasicMaterial({color:0x5e3f8c,side:THREE.BackSide,fog:false})));
+under.add(new THREE.HemisphereLight(0xcdb2ff,0x5a4458,.9));
+const sandN=new THREE.TextureLoader().load('/webgl/textures/waternormals.jpg',t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(40,40);});
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshStandardMaterial({color:0x9c8790,roughness:1,normalMap:sandN,normalScale:new THREE.Vector2(.5,.5)}));
+floor.rotation.x=-Math.PI/2; floor.position.y=-7; under.add(floor);
+// the surface seen from below: a bright, shimmering ceiling
+const ceil=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshBasicMaterial({color:0xa684e6,transparent:true,opacity:.3,side:THREE.DoubleSide,depthWrite:false}));
+ceil.rotation.x=-Math.PI/2; ceil.position.y=-.03; under.add(ceil);
+const stoneMat=new THREE.MeshStandardMaterial({color:0x5a4c5e,roughness:1,flatShading:true});
+[[-5,-14,1.1,7],[-3.4,-17,.8,5],[6,-20,1.2,8],[8,-27,1,6],[-9,-30,1.4,9],[3,-36,1,7]].forEach(([x,z,r,hh])=>{
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r*.8,r,hh,7),stoneMat);m.position.set(x,-7+hh/2,z);m.rotation.z=(Math.random()-.5)*.12;under.add(m);});
+[[-7,-10,2.2],[9,-15,3],[-12,-24,3.5],[13,-33,4],[0,-44,5]].forEach(([x,z,s])=>{
+  const m=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),stoneMat);m.position.set(x,-7+s*.4,z);m.scale.y=.55;m.rotation.y=Math.random()*3;under.add(m);});
+// slanted god-rays, like the underwater scene's
+const rayMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,fog:false,
+  vertexShader:`varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec2 u;void main(){float e=pow(sin(u.x*3.14159),3.);gl_FragColor=vec4(vec3(.85,.7,1.),e*smoothstep(0.,.9,u.y)*.16);}`});
+[[-3,-12],[2,-18],[7,-24],[-6,-28]].forEach(([x,z],i)=>{const r=new THREE.Mesh(new THREE.PlaneGeometry(2.5+i*.6,26),rayMat);r.position.set(x,-6,z);r.rotation.z=-.42;under.add(r);});
 
 const jesus=fit(J,1.8), jb=bones(J); jesus.position.set(0,-.62,0); scene.add(jesus);
 const dove=fit(D,.3), db=bones(D); dove.rotation.order='YXZ'; scene.add(dove);
@@ -266,11 +291,14 @@ renderer.setAnimationLoop(()=>{
   camL.set(0,followY-.05,-.8).lerp(tmp2.set(0,HEAD-.05,0),ss(.34,.56,p));
   // Dive: the camera sinks below the river surface and the water closes over into the deep
   // eased so the camera skims the surface for most of the scroll and the water closes over it near the end
-  if(dive>0){const dv=Math.pow(dive,2.2);camera.position.y=L(camera.position.y,-1.4,dv);camera.position.z=L(camera.position.z,2.6,dive);camL.y=L(camL.y,-.6,dv);}
-  // Cover the frame by the time the camera crosses the surface (wide phone FOV otherwise shows Jesus's legs underwater)
-  const under=dive>0?1-ss(-.35,.15,camera.position.y):0;
-  const deepO=Math.max(ss(.35,.85,dive),under);
-  deep.style.opacity=deepO; jesus.visible=deepO<.99;
+  // The camera slips beside Jesus, sinks under the surface and turns to look ahead along the sandy floor
+  if(dive>0){const dv=Math.pow(dive,1.8),turn=ss(.45,1,dive);
+    camera.position.set(L(camera.position.x,2.4,dv),L(camera.position.y,-3.4,dv),L(camera.position.z,1.2,dive));
+    camL.lerp(tmp2.set(0,-4.2,-26),turn);}
+  const below=camera.position.y<-.02;
+  under.visible=below; water.visible=!below; above.forEach(o=>o.visible=!below);
+  scene.fog=below?underFog:skyFog;
+  deep.style.opacity=0;
   camera.lookAt(camL);
   beam.lookAt(camera.position.x,beam.position.y,camera.position.z);
   composer.render();
