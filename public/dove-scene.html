@@ -154,8 +154,9 @@ const EMBED=document.documentElement.classList.contains("embed");
 let target=0,p=0,qT=0,q=0;
 // Embedded: the homepage sends overall progress q (0..1): cloud screen -> dove scene -> dive underwater
 let pT=0,diveT=0,qIn=0,fadeS=0,sinkT=0,sink=0;
-let onScreen=true;
-addEventListener("message",e=>{if(e.origin===location.origin&&e.data&&typeof e.data.p==="number"){pT=e.data.p;diveT=e.data.dive||0;sinkT=e.data.sink||0;qIn=e.data.fade||0;onScreen=e.data.on!==false;}});
+let onScreen=true,started=false;
+addEventListener("message",e=>{if(e.origin===location.origin&&e.data&&typeof e.data.p==="number"){pT=e.data.p;diveT=e.data.dive||0;sinkT=e.data.sink||0;qIn=e.data.fade||0;onScreen=e.data.on!==false;
+  if(!started){started=true;q=pT;sink=sinkT;fadeS=qIn;camInit=false;}}});   // first message: jump straight to the visitor's position
 const mist=document.getElementById("mist");
 const onScroll=()=>{if(EMBED)return;const m=document.documentElement.scrollHeight-innerHeight;target=m>0?Math.min(1,scrollY/m):0;document.getElementById('hint').style.opacity=target>.02?0:1;};
 addEventListener('scroll',onScroll,{passive:true});onScroll();
@@ -182,7 +183,7 @@ renderer.setAnimationLoop(()=>{
   const t=clock.getElapsedTime(),dt=Math.min(.05,t-lastT);lastT=t;
   if(window.__p!==undefined&&window.__p!==window.__lp){p=target=window.__lp=window.__p;camInit=false;} // screenshot hook
   let dive=0;
-  if(EMBED){q+=(pT-q)*(reduce?1:ease(5,dt));target=q;p=q;dive=diveT;sink+=(sinkT-sink)*(reduce?1:ease(17,dt));}
+  if(EMBED){q+=(pT-q)*(reduce?1:ease(3.5,dt));target=q;p=q;dive=diveT;sink+=(sinkT-sink)*(reduce?1:ease(17,dt));}
   else p+=(target-p)*(reduce?1:ease(3.7,dt));
   water.material.uniforms.time.value=reduce?0:t*.3; skyMat.uniforms.t.value=t;
 

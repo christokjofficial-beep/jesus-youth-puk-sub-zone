@@ -13,7 +13,15 @@ import { useEffect, useRef, useState } from "react";
 // Must match the engine patch in public/build/js-25cd474e.js:
 export const STATUE_SWITCH = 0.76; // statue (space) scene toNextThreshold (its progress is clamped at .78): switch to the sky
 const SKY_LANDING = 0.12; // statue -> sky transition toPrevThreshold: where that switch lands in the sky section
-const UNDERWATER_LANDING = 0.006; // sky -> underwater transition toPrevThreshold: just under the water surface
+const UNDERWATER_LANDING = 0.02; // sky -> underwater transition toPrevThreshold: just under the water surface
+
+// Dove timeline in screens of scrolling, the same on every device (app/globals.css sizes the sky section to fit):
+const EMERGE = 1.8; // the cloud thins and the dove slowly breaks out of it
+const REST = 0.25; // the dove rests above Jesus
+const DIVE = 0.6; // the camera comes down to the river
+const WATERLINE = 0.5; // the waterline rises into the underwater scene
+// the glide down from the cloud to Jesus fills the rest (~3.2 screens)
+
 const WAVE_W = 600; // px per tile of the waterline
 
 const smooth = (a: number, b: number, x: number) => {
@@ -96,13 +104,15 @@ export default function DoveSkyOverlay() {
       const skyLand = sky.offsetTop + SKY_LANDING * sky.offsetHeight;
       const trigger = sky.offsetTop + 0.9 * (sky.offsetHeight - vh); // engine's sky -> underwater switch
       const land = water.offsetTop + UNDERWATER_LANDING * water.offsetHeight; // where that switch lands
-      const diveFrom = trigger - 1.6 * vh;
+      const emerged = skyLand + EMERGE * vh; // dove out of the cloud
+      const diveFrom = trigger - DIVE * vh;
+      const restFrom = Math.max(emerged + 0.5 * vh, diveFrom - REST * vh); // dove has landed above Jesus
       const fade = smooth(statueSwitch - 0.7 * vh, statueSwitch - 0.03 * vh, y);
       // The camera comes down to the river over the last stretch of the Jesus scene. The engine then switches to its
       // underwater scene and jumps the page to `land` (hidden: this layer still covers everything), and scrolling on
       // raises the waterline. It moves linearly with the scroll, so it follows the visitor's finger.
       const dive = y >= trigger ? 1 : smooth(diveFrom, trigger - 0.05 * vh, y);
-      const wipe = y < land ? 0 : Math.min(1, (y - land) / (0.75 * vh));
+      const wipe = y < land ? 0 : Math.min(1, (y - land) / (WATERLINE * vh));
       const opacity = fade;
       const shown = opacity > 0.001 && wipe < 1;
       el.style.opacity = String(opacity);
@@ -138,10 +148,15 @@ export default function DoveSkyOverlay() {
       // The engine skips drawing only while the Jesus scene fully covers it; from the switch on it renders the
       // underwater scene underneath so the waterline has something to reveal
       engine.__jyPauseEngine = opacity >= 0.999 && y < trigger;
-      // Dove timing as a share of the scroll from the sky landing to the dive (the sky section is 2500px base on
-      // phones, 5000px on desktop): it breaks out of the cloud at once and rests above Jesus (p≈0.52) at 85%.
-      const span = diveFrom - skyLand;
-      const doveP = y < skyLand ? 0 : Math.min(1, Math.max(0, (0.52 * (y - skyLand)) / (0.85 * span)));
+      // Dove progress p (dove-scene.html): 0-0.15 breaking out of the cloud, 0.15-0.52 the glide down and landing
+      // above Jesus, 0.52-0.8 heaven's light grows while it rests and the camera comes down to the river.
+      const lin = (a: number, b: number) => Math.min(1, Math.max(0, (y - a) / (b - a)));
+      const doveP =
+        y < emerged
+          ? 0.15 * lin(skyLand, emerged)
+          : y < restFrom
+            ? 0.15 + 0.37 * lin(emerged, restFrom)
+            : 0.52 + 0.28 * lin(restFrom, trigger);
       el.contentWindow?.postMessage({ fade, p: doveP, dive, sink: wipe, on: shown }, window.location.origin);
     };
     tick();
